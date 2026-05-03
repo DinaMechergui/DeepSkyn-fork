@@ -242,6 +242,36 @@ describe('SkinMetricService', () => {
       const callArgs = mockAnalysisRepo.find.mock.calls[0][0];
       expect(callArgs.order).toEqual({ createdAt: 'DESC' });
     });
+
+    it('should throw UnauthorizedException for missing userId', async () => {
+      await expect(service.getUserSkinAgeSeries(undefined as any, 5)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should throw UnauthorizedException for invalid userId type', async () => {
+      await expect(service.getUserSkinAgeSeries(123 as any, 5)).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('getAnalysisById', () => {
+    it('should return analysis with metrics', async () => {
+      const mockAnal = { id: 'a1', skinScore: 80 };
+      const mockMetrics = [
+        { metricType: 'HYDRATION', score: 90 }, // tests case insensitivity
+        { metricType: 'ENLARGED-PORES', score: 40 }, // tests oil fallback
+      ];
+      mockAnalysisRepo.findOne.mockResolvedValueOnce(mockAnal);
+      mockMetricRepo.find.mockResolvedValueOnce(mockMetrics);
+
+      const result = await service.getAnalysisById('a1');
+      expect(result).toBeDefined();
+      expect(result.metrics.hydration).toBe(90);
+      expect(result.metrics.oil).toBe(40);
+    });
+
+    it('should throw NotFoundException if analysis not found', async () => {
+      mockAnalysisRepo.findOne.mockResolvedValueOnce(null);
+      await expect(service.getAnalysisById('invalid')).rejects.toThrow('Analysis not found');
+    });
   });
 
   describe('Mathematical Calculations - Edge Cases', () => {
@@ -368,6 +398,26 @@ describe('SkinMetricService', () => {
       const result = await service.compare('a1', 'a2') as any;
       expect(result.metricsMissing).toBe(true);
       expect(result.metricsMessage).toBeDefined();
+    });
+
+    it('should include points de vigilance and ameliorations notables in summary', async () => {
+      const mockFirstAnalysis = { ...mockAnalysis, id: 'a1', skinScore: 50, createdAt: new Date() };
+      const mockSecondAnalysis = { ...mockAnalysis, id: 'a2', skinScore: 50, createdAt: new Date() };
+
+      mockAnalysisRepo.findOne.mockResolvedValueOnce(mockFirstAnalysis).mockResolvedValueOnce(mockSecondAnalysis);
+      mockMetricRepo.find
+        .mockResolvedValueOnce([
+          { metricType: 'acne', score: 20 },
+          { metricType: 'hydration', score: 20 }
+        ])
+        .mockResolvedValueOnce([
+          { metricType: 'acne', score: 80 }, // +60 (regression for acne)
+          { metricType: 'hydration', score: 80 } // +60 (improvement for hydration)
+        ]);
+
+      const result = await service.compare('a1', 'a2');
+      expect(result.summaryText).toContain('Points de vigilance');
+      expect(result.summaryText).toContain('Améliorations notables');
     });
   });
 });

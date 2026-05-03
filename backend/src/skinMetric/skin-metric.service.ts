@@ -133,17 +133,17 @@ export class SkinMetricService {
    * Build unified metrics view (hydration, oil, acne, wrinkles) from entity and/or SkinMetric rows.
    */
   private buildMetricsView(analysis: SkinAnalysis, metrics: SkinMetric[]): AnalysisMetricsView {
-    const fromEntity = (key: MetricKey): number => {
+    const fromEntity = (key: MetricKey): number | undefined => {
       const v = (analysis as any)[key];
-      return typeof v === 'number' && !Number.isNaN(v) ? v : NaN;
+      return typeof v === 'number' && !Number.isNaN(v) ? v : undefined;
     };
-    const fromMetrics = (metricTypeMatch: string): number => {
+    const fromMetrics = (metricTypeMatch: string): number | undefined => {
       const m = metrics.find(
         x => x.metricType?.toLowerCase() === metricTypeMatch.toLowerCase()
       );
-      return m != null ? m.score : NaN;
+      return m != null ? m.score : undefined;
     };
-    const num = (v: number) => (Number.isFinite(v) ? v : 0);
+    const num = (v: number | undefined) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
     return {
       hydration: num(fromEntity('hydration') ?? fromMetrics('hydration')),
       oil: num(fromEntity('oil') ?? fromMetrics('oil') ?? fromMetrics('enlarged-pores')),
