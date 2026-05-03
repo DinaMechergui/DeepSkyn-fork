@@ -464,14 +464,14 @@ export const DigitalTwinPage: React.FC<DigitalTwinPageProps> = ({ baseAnalysisId
                     {isSpeakingRecommendation ? 'Arreter' : 'Ecouter'}
                   </button>
                 </div>
-                <p style={{ fontSize: 16, color: THEME.textPrimary, lineHeight: 1.6, margin: 0 }}>
+                <div style={{ fontSize: 16, color: THEME.textPrimary, lineHeight: 1.6, margin: 0 }}>
                   {timeline.currentState && (
                     <div style={{ marginBottom: 16 }}>
                       {/* Dynamic recommendation based on trajectory */}
                       Get a tailored recommendation based on your current skin state and predicted trajectory.
                     </div>
                   )}
-                </p>
+                </div>
               </div>
             )}
 

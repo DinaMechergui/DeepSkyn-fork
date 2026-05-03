@@ -8,7 +8,6 @@ import { Users, UserCheck, TrendingUp, AlertCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { getAdminStats } from '@/services/adminService'
-import BiometricRegistration from '@/components/admin/BiometricRegistration'
 import type { AdminDashboardStats } from '@/types/admin'
 
 export default function AdminDashboardPage() {
@@ -34,43 +33,16 @@ export default function AdminDashboardPage() {
     }
   }
 
-
-
-  return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Tableau de bord Admin</h1>
-          <p className="text-slate-600 mt-2">Vue d'ensemble de votre plateforme</p>
-        </div>
-        <Button
-          onClick={loadStats}
-          variant="outline"
-          className="sm:self-start"
-        >
-          Actualiser
-        </Button>
-      </div>
-
-      {/* Message erreur */}
-      {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 p-4 flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold text-red-900">Erreur</p>
-            <p className="text-sm text-red-700">{error}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Contenu chargement */}
-      {isLoading ? (
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex justify-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600"></div>
         </div>
       )
     }
 
-    if (!stats) return null;
+    if (!stats) return null
 
     return (
       <>
@@ -98,58 +70,32 @@ export default function AdminDashboardPage() {
             icon={TrendingUp}
             title="Nouveaux utilisateurs"
             value={stats.newUsersThisMonth}
-            subtitle="ce mois"
+            subtitle="Ce mois-ci"
             color="amber"
-          />
-          <StatCard
-            icon={UserCheck}
-            title="Utilisateurs actifs"
-            value={stats.activeUsersThisMonth}
-            subtitle="ce mois"
-            color="teal"
-          />
-          <StatCard
-            icon={TrendingUp}
-            title="Connexions totales"
-            value={stats.totalLogins}
-            color="blue"
           />
         </div>
 
-        {/* Biometric Registration */}
-        <BiometricRegistration />
-
-        {/* Actions rapides */}
-        <div className="rounded-lg border border-slate-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Actions rapides</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Quick Access */}
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="rounded-lg border border-slate-200 bg-white p-6">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">Gestion des utilisateurs</h3>
+            <p className="text-slate-600 mb-6">
+              Consultez la liste complète des utilisateurs, modifiez leurs rôles ou supprimez des comptes.
+            </p>
             <Link to="/admin/users">
-              <Button
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white"
-              >
-                Gérer utilisateurs
+              <Button className="w-full sm:w-auto">
+                Gérer les utilisateurs
               </Button>
             </Link>
-            <Button
-              variant="outline"
-              className="w-full"
-              disabled
-            >
-              Logs système
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full"
-              disabled
-            >
-              Backups
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full"
-              disabled
-            >
-              Settings
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-white p-6">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">Paramètres système</h3>
+            <p className="text-slate-600 mb-6">
+              Configurez les options globales de la plateforme et surveillez l'état des services.
+            </p>
+            <Button variant="outline" className="w-full sm:w-auto" disabled>
+              Accéder aux paramètres
             </Button>
           </div>
         </div>
@@ -196,7 +142,7 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Contenu chargement */}
+      {/* Contenu */}
       {renderContent()}
     </div>
   )

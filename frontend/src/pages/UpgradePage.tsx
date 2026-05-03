@@ -356,10 +356,10 @@ export default function UpgradePage() {
 
       {/* Page Header */}
       <div className="text-center pt-12 pb-8 px-4">
-        <p className="text-teal-600 font-bold mb-4 flex items-center gap-2 justify-center">
+        <div className="text-teal-600 font-bold mb-4 flex items-center gap-2 justify-center">
           <Star size={20} className="fill-teal-500" />
           <span>Plans & Tarification</span>
-        </p>
+        </div>
         <h1 className="text-4xl md:text-5xl font-black text-slate-900 mb-4 leading-tight">
           Choisissez le plan qui <br />
           <span className="bg-gradient-to-r from-teal-500 to-purple-500 bg-clip-text text-transparent">
