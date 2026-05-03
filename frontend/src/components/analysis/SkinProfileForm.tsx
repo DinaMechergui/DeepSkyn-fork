@@ -164,6 +164,14 @@ const getPoresZoneBoost = (zone: string) => {
     return 0;
 };
 
+const calculateBoost = (item: any, getBase: (s: string) => number, extraBoost: number = 0, locationMult: number = 0) => {
+    if (!item.enabled) return { base: undefined, boost: 0 };
+    const baseValue = item.severity || item.depth || item.visibility || item.level || '';
+    const base = getBase(baseValue);
+    const boost = extraBoost + (item.location?.length || 0) * locationMult;
+    return { base, boost };
+};
+
 /** Detail Components to reduce complexity */
 
 const AcneDetails = ({ data, setSingle, toggleMultiSelect }: { data: any, setSingle: any, toggleMultiSelect: any }) => (
@@ -552,54 +560,19 @@ export const SkinProfileForm: React.FC<SkinProfileFormProps> = ({ profile, setPr
     const derivedInputs = useMemo(() => {
         const concerns: string[] = [];
 
-        const calculateAcneBoost = (item: any) => {
-            if (!item.enabled) return { base: undefined, boost: 0 };
-            const base = getAcneBase(item.severity || '');
-            const boost = getAcneTypeBoost(item.type) + (item.location?.length || 0) * 3;
-            return { base, boost };
-        };
-
-        const calculateBlackheadsBoost = (item: any) => {
-            if (!item.enabled) return { base: undefined, boost: 0 };
-            const base = getBlackheadsBase(item.severity || '');
-            const boost = (item.location?.length || 0) * 2;
-            return { base, boost };
-        };
-
-        const calculateWrinklesBoost = (item: any) => {
-            if (!item.enabled) return { base: undefined, boost: 0 };
-            const base = getWrinklesBase(item.depth || '');
-            const boost = (item.location?.length || 0) * 4;
-            return { base, boost };
-        };
-
-        const calculatePoresBoost = (item: any) => {
-            if (!item.enabled) return { base: undefined, boost: 0 };
-            const base = getPoresBase(item.visibility || '');
-            const boost = getPoresZoneBoost(item.zone);
-            return { base, boost };
-        };
-
-        const calculateRednessBoost = (item: any) => {
-            if (!item.enabled) return { base: undefined, boost: 0 };
-            const base = getRednessBase(item.level || '');
-            const boost = (item.location?.length || 0) * 2;
-            return { base, boost };
-        };
-
-        const acneRes = calculateAcneBoost(questionnaire.acne);
+        const acneRes = calculateBoost(questionnaire.acne, getAcneBase, getAcneTypeBoost(questionnaire.acne.type), 3);
         if (questionnaire.acne.enabled) concerns.push('Acné');
         
-        const blackheadsRes = calculateBlackheadsBoost(questionnaire.blackheads);
+        const blackheadsRes = calculateBoost(questionnaire.blackheads, getBlackheadsBase, 0, 2);
         if (questionnaire.blackheads.enabled) concerns.push('Points noirs');
         
-        const wrinklesRes = calculateWrinklesBoost(questionnaire.wrinkles);
+        const wrinklesRes = calculateBoost(questionnaire.wrinkles, getWrinklesBase, 0, 4);
         if (questionnaire.wrinkles.enabled) concerns.push('Rides');
         
-        const poresRes = calculatePoresBoost(questionnaire.pores);
+        const poresRes = calculateBoost(questionnaire.pores, getPoresBase, getPoresZoneBoost(questionnaire.pores.zone), 0);
         if (questionnaire.pores.enabled) concerns.push('Pores dilatés');
 
-        const rednessRes = calculateRednessBoost(questionnaire.redness);
+        const rednessRes = calculateBoost(questionnaire.redness, getRednessBase, 0, 2);
         if (questionnaire.redness.enabled) concerns.push('Rougeurs');
 
         if (questionnaire.hydration.enabled) concerns.push('Déshydratation');

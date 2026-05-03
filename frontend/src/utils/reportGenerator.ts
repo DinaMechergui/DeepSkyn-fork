@@ -8,43 +8,63 @@ const GRAY = '#64748b';
 const MARGIN_X = 20;
 
 /**
- * Extracts and normalizes condition scores from multiple potential sources
+ * Extracts scores from combined insights source.
+ */
+const getScoresFromCombined = (combinedInsights: any): any[] => {
+  return Object.entries(combinedInsights).map(([key, entry]: [string, any]) => ({
+    type: key,
+    score: entry.combinedScore || entry.aiScore || entry.userScore || 0,
+    description: `Analysis based on ${entry.weight?.ai > 0 ? 'AI Scan' : ''}${entry.weight?.ai > 0 && entry.weight?.user > 0 ? ' & ' : ''}${entry.weight?.user > 0 ? 'Profile' : ''}.`
+  }));
+};
+
+/**
+ * Extracts scores from basic metrics source.
+ */
+const getScoresFromMetrics = (analysis: any): any[] => {
+  const rawMetrics = analysis?.metrics || analysis?.data?.metrics || [];
+  if (!Array.isArray(rawMetrics)) return [];
+  return rawMetrics.map((m: any) => ({
+    type: m.metricType || m.name || 'Unknown',
+    score: m.score || 0,
+    description: m.severityLevel || 'Analysis complete.'
+  }));
+};
+
+/**
+ * Extracts scores from routine trends source.
+ */
+const getScoresFromTrends = (trends: any): any[] => {
+  const scores: any[] = [];
+  if (trends.hydration) scores.push({ type: 'Hydratation', score: trends.hydration.current, description: 'Current hydration levels detected.' });
+  if (trends.oil) scores.push({ type: 'Sébum', score: trends.oil.current, description: 'Sebum and lipid activity.' });
+  if (trends.acne) scores.push({ type: 'Acné', score: trends.acne.current, description: 'Inflammatory activity level.' });
+  if (trends.wrinkles) scores.push({ type: 'Rides', score: trends.wrinkles.current, description: 'Elasticity and line depth.' });
+  return scores;
+};
+
+/**
+ * Normalizes condition scores from multiple potential sources to reduce cognitive complexity.
  */
 const getConditionScores = (analysis: any, routine: any): any[] => {
-  let scores: any[] = [];
-
   if (analysis?.combinedInsights) {
-    scores = Object.entries(analysis.combinedInsights).map(([key, entry]: [string, any]) => ({
-      type: key,
-      score: entry.combinedScore || entry.aiScore || entry.userScore || 0,
-      description: `Analysis based on ${entry.weight?.ai > 0 ? 'AI Scan' : ''}${entry.weight?.ai > 0 && entry.weight?.user > 0 ? ' & ' : ''}${entry.weight?.user > 0 ? 'Profile' : ''}.`
-    }));
-  } else if (Array.isArray(analysis?.conditionScores)) {
-    scores = analysis.conditionScores;
-  } else if (Array.isArray(analysis?.aiRawResponse?.conditionScores)) {
-    scores = analysis.aiRawResponse.conditionScores;
+    return getScoresFromCombined(analysis.combinedInsights);
+  }
+  if (Array.isArray(analysis?.conditionScores)) {
+    return analysis.conditionScores;
+  }
+  if (Array.isArray(analysis?.aiRawResponse?.conditionScores)) {
+    return analysis.aiRawResponse.conditionScores;
   }
 
-  if (scores.length === 0) {
-    const rawMetrics = analysis?.metrics || analysis?.data?.metrics || [];
-    if (Array.isArray(rawMetrics)) {
-      scores = rawMetrics.map((m: any) => ({
-        type: m.metricType || m.name || 'Unknown',
-        score: m.score || 0,
-        description: m.severityLevel || 'Analysis complete.'
-      }));
-    }
+  const metricScores = getScoresFromMetrics(analysis);
+  if (metricScores.length > 0) return metricScores;
+
+  if (routine?.trends) {
+    return getScoresFromTrends(routine.trends);
   }
 
-  if (scores.length === 0 && routine?.trends) {
-    const t = routine.trends;
-    if (t.hydration) scores.push({ type: 'Hydratation', score: t.hydration.current, description: 'Current hydration levels detected.' });
-    if (t.oil) scores.push({ type: 'Sébum', score: t.oil.current, description: 'Sebum and lipid activity.' });
-    if (t.acne) scores.push({ type: 'Acné', score: t.acne.current, description: 'Inflammatory activity level.' });
-    if (t.wrinkles) scores.push({ type: 'Rides', score: t.wrinkles.current, description: 'Elasticity and line depth.' });
-  }
-
-  return scores;
+  return [];
 };
 
 const checkPage = (doc: any, currentY: number, needed: number) => {
@@ -71,7 +91,7 @@ const drawHeader = (doc: any, plan: string) => {
   
   doc.setTextColor(TEAL);
   doc.setFontSize(10);
-  doc.text(`REPORT ID: DS-${Math.random().toString(36).substr(2, 9).toUpperCase()}`, 145, 20);
+  doc.text(`REPORT ID: DS-${Math.random().toString(36).substring(2, 11).toUpperCase()}`, 145, 20);
   doc.text(`DATE: ${new Date().toLocaleDateString()}`, 145, 26);
   doc.text(`${plan} ACCESS LEVEL`, 145, 32);
 };
@@ -103,63 +123,54 @@ const drawFooter = (doc: any) => {
   }
 };
 
+const getStatusFromScore = (score: number) => {
+  if (score > 70) return 'CRITICAL';
+  if (score > 40) return 'MODERATE';
+  return 'STABLE';
+};
+
 const drawDiagnosticCards = (doc: any, y: number, conditionScores: any[]) => {
   const diagnosticMap: Record<string, { why: string; ingredients: string }> = {
-    acne: {
-      why: "Acne is typically caused by a combination of excess sebum production, clogging of hair follicles, and bacteria.",
-      ingredients: "Salicylic Acid, Zinc PCA, and Niacinamide."
-    },
-    'acné': {
-      why: "L'acné est causée par une surproduction de sébum, l'obstruction des follicules et la prolifération bactérienne.",
-      ingredients: "Acide Salicylique, Zinc PCA et Niacinamide."
-    },
-    wrinkles: {
-      why: "Wrinkles occur due to a natural decline in collagen and elastin production, accelerated by UV exposure.",
-      ingredients: "Retinoids, Peptides, and Hyaluronic Acid."
-    },
-    rides: {
-      why: "Les rides sont le résultat d'une diminution du collagène et de l'élastine, souvent accentuée par les UV.",
-      ingredients: "Rétinol, Peptides et Acide Hyaluronique."
-    },
-    hydration: {
-      why: "Skin dehydration is a lack of water in the stratum corneum, often caused by an impaired lipid barrier.",
-      ingredients: "Hyaluronic Acid, Glycerin, and Squalane."
-    }
+    acne: { why: "Acne is typically caused by sebum and bacteria.", ingredients: "Salicylic Acid, Zinc PCA." },
+    'acné': { why: "L'acné est causée par le sébum et les bactéries.", ingredients: "Acide Salicylique, Zinc PCA." },
+    wrinkles: { why: "Wrinkles occur due to collagen decline.", ingredients: "Retinoids, Peptides." },
+    rides: { why: "Les rides sont dues à la baisse de collagène.", ingredients: "Rétinol, Peptides." },
+    hydration: { why: "Skin dehydration is a lack of water.", ingredients: "Hyaluronic Acid, Glycerin." }
   };
 
   let currentY = y;
   conditionScores.filter(c => (c.score || 0) >= 5).forEach(c => {
     const detail = diagnosticMap[c.type.toLowerCase().trim()];
-    if (detail) {
-      const score = Math.round(c.score || 0);
-      const status = score > 70 ? 'CRITICAL' : score > 40 ? 'MODERATE' : 'STABLE';
-      currentY = checkPage(doc, currentY, 80);
+    if (!detail) return;
 
-      doc.setFillColor(252, 255, 254);
-      doc.setDrawColor(204, 251, 241);
-      doc.roundedRect(MARGIN_X, currentY, 170, 70, 3, 3, 'FD');
+    const score = Math.round(c.score || 0);
+    const status = getStatusFromScore(score);
+    currentY = checkPage(doc, currentY, 80);
 
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(TEAL);
-      doc.text(`${c.type.toUpperCase()} — ${score}% Severity (${status})`, MARGIN_X + 8, currentY + 10);
-      
-      doc.setFontSize(8);
-      doc.setTextColor(SLATE);
-      doc.text('CLINICAL REASONING:', MARGIN_X + 8, currentY + 35);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(GRAY);
-      doc.text(doc.splitTextToSize(detail.why, 155), MARGIN_X + 8, currentY + 40);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(SLATE);
-      doc.text('ACTIVE RESOLUTION:', MARGIN_X + 8, currentY + 55);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(TEAL);
-      doc.text(doc.splitTextToSize(detail.ingredients, 155), MARGIN_X + 8, currentY + 60);
-      
-      currentY += 80;
-    }
+    doc.setFillColor(252, 255, 254);
+    doc.setDrawColor(204, 251, 241);
+    doc.roundedRect(MARGIN_X, currentY, 170, 70, 3, 3, 'FD');
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(TEAL);
+    doc.text(`${c.type.toUpperCase()} — ${score}% Severity (${status})`, MARGIN_X + 8, currentY + 10);
+    
+    doc.setFontSize(8);
+    doc.setTextColor(SLATE);
+    doc.text('CLINICAL REASONING:', MARGIN_X + 8, currentY + 35);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(GRAY);
+    doc.text(doc.splitTextToSize(detail.why, 155), MARGIN_X + 8, currentY + 40);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(SLATE);
+    doc.text('ACTIVE RESOLUTION:', MARGIN_X + 8, currentY + 55);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(TEAL);
+    doc.text(doc.splitTextToSize(detail.ingredients, 155), MARGIN_X + 8, currentY + 60);
+    
+    currentY += 80;
   });
   return currentY;
 };
@@ -179,7 +190,7 @@ const drawExpertAdvice = (doc: any, y: number, advice: string[]) => {
 };
 
 export const generateClinicalReport = async (data: any) => {
-  const { user, plan, routine, insight, analysis, products } = data;
+  const { user, plan, routine, insight, analysis } = data;
   const doc = new jsPDF() as any;
   let y = 60;
 
@@ -219,17 +230,21 @@ export const generateClinicalReport = async (data: any) => {
     margin: { left: MARGIN_X + 5 }
   });
 
-  y = (doc as any).lastAutoTable.finalY + 15;
+  y = doc.lastAutoTable.finalY + 15;
 
   // --- SECTION 2: CLINICAL ANALYSIS ---
   y = drawSectionTitle(doc, y, 'Clinical Analysis Results');
   const conditionScores = getConditionScores(analysis, routine);
-  const analysisTable = conditionScores.map((c: any) => [
-    c.type.charAt(0).toUpperCase() + c.type.slice(1),
-    `${Math.round(c.score || 0)}%`,
-    (c.score || 0) > 70 ? 'CRITICAL' : (c.score || 0) > 40 ? 'MODERATE' : 'OPTIMAL',
-    c.description || 'Monitoring recommended.'
-  ]);
+  const analysisTable = conditionScores.map((c: any) => {
+    const score = c.score || 0;
+    const status = score > 70 ? 'CRITICAL' : (score > 40 ? 'MODERATE' : 'OPTIMAL');
+    return [
+      c.type.charAt(0).toUpperCase() + c.type.slice(1),
+      `${Math.round(score)}%`,
+      status,
+      c.description || 'Monitoring recommended.'
+    ];
+  });
 
   autoTable(doc, {
     startY: y,
@@ -241,7 +256,7 @@ export const generateClinicalReport = async (data: any) => {
     margin: { left: MARGIN_X }
   });
 
-  y = (doc as any).lastAutoTable.finalY + 12;
+  y = doc.lastAutoTable.finalY + 12;
 
   // --- DIAGNOSTIC CARDS ---
   y = drawSectionTitle(doc, y, 'Deep Diagnostic & Active Resolution');
@@ -264,7 +279,7 @@ export const generateClinicalReport = async (data: any) => {
       styles: { fontSize: 8, cellPadding: 4 },
       margin: { left: MARGIN_X }
     });
-    y = (doc as any).lastAutoTable.finalY + 15;
+    y = doc.lastAutoTable.finalY + 15;
   }
 
   // --- SECTION 5: ADVICE ---
@@ -277,5 +292,5 @@ export const generateClinicalReport = async (data: any) => {
   y = drawExpertAdvice(doc, y, advice);
 
   drawFooter(doc);
-  doc.save(`DeepSkyn_Clinical_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+  doc.save(`DeepSkyn_Clinical_Report_${new Date().toISOString().substring(0, 10)}.pdf`);
 };
