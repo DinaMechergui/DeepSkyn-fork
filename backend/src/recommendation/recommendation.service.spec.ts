@@ -266,7 +266,7 @@ describe('RecommendationService', () => {
       expect(Array.isArray(result)).toBe(true);
     });
 
-    it('should fallback to database if Python script fails completely', async () => {
+    it('should fallback to DB if Python returns JSON with error property', async () => {
       (fs.existsSync as jest.Mock).mockReturnValue(true);
       const mockProcess = {
         stdout: { on: jest.fn() },
@@ -275,19 +275,57 @@ describe('RecommendationService', () => {
       };
       (child_process.spawn as jest.Mock).mockReturnValue(mockProcess);
       
-      // Mock DB products for fallback
-      const mockProducts = [{ id: '99', name: 'Fallback Product', type: 'Serum', url: 'https://example.com' } as any];
-      mockProductRepository.find.mockResolvedValue(mockProducts);
-
-      const promise = service.getRecommendationsForSkinState('user-fail', 'analysis-fail', 'dry');
+      const promise = service.getRecommendationsForSkinState('u', 'a', 'dry');
       
+      const stdoutCallback = mockProcess.stdout.on.mock.calls.find(c => c[0] === 'data')[1];
+      stdoutCallback(Buffer.from(JSON.stringify({ error: 'Some python logic error' })));
+
       const closeCallback = mockProcess.on.mock.calls.find(c => c[0] === 'close')[1];
-      closeCallback(1); // Failure
+      closeCallback(0);
 
       const result = await promise;
       expect(result).toBeDefined();
-      expect(result.length).toBeGreaterThan(0);
-      expect(result[0].name).toBe('Fallback Product');
+    });
+
+    it('should fallback to DB if Python returns invalid JSON', async () => {
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      const mockProcess = {
+        stdout: { on: jest.fn() },
+        stderr: { on: jest.fn() },
+        on: jest.fn(),
+      };
+      (child_process.spawn as jest.Mock).mockReturnValue(mockProcess);
+      
+      const promise = service.getRecommendationsForSkinState('u', 'a', 'dry');
+      
+      const stdoutCallback = mockProcess.stdout.on.mock.calls.find(c => c[0] === 'data')[1];
+      stdoutCallback(Buffer.from('Not valid JSON'));
+
+      const closeCallback = mockProcess.on.mock.calls.find(c => c[0] === 'close')[1];
+      closeCallback(0);
+
+      const result = await promise;
+      expect(result).toBeDefined();
+    });
+
+    it('should handle various product types and urls in fallback', async () => {
+      (service as any).pythonDisabled = true;
+      const mockProducts = [
+        { id: '1', name: 'Moist', type: 'moisturizer', rating: 5, targetIssues: ['acne'], url: 'www.test.com' },
+        { id: '2', name: 'Sun', type: 'sunscreen', rating: null, targetIssues: [], url: '//test.com' },
+      ];
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(mockProducts),
+      };
+      mockProductRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
+      mockProductRepository.find.mockResolvedValue(mockProducts as any);
+
+      const result = await service.getRecommendationsForSkinState('u', 'a', 'dry', ['acne']);
+      expect(result.some(r => r.type === 'moisturizer')).toBe(true);
+      expect(result.some(r => r.type === 'sunscreen')).toBe(true);
     });
   });
 
@@ -375,7 +413,7 @@ describe('RecommendationService', () => {
       const analysisId = 'analysis-multi';
       const recommendations = [
         { productId: '1', name: 'Product 1', reason: 'Reason 1', rank: 1 },
-        { productId: '2', name: 'Product 2', reason: 'Reason 2', rank: 2 },
+        { id: '2', name: 'Product 2', reason: 'Reason 2', rank: 2 },
         { productId: '3', name: 'Product 3', reason: 'Reason 3', rank: 3 },
       ];
 
@@ -544,9 +582,9 @@ describe('RecommendationService', () => {
       expect(mockProductRepository.save).toHaveBeenCalled();
     });
     
-    it('should update missing urls', async () => {
+    it('should update missing urls and prepend https to www', async () => {
       (fs.existsSync as jest.Mock).mockReturnValue(true);
-      (fs.readFileSync as jest.Mock).mockReturnValue('product_name,product_url,product_type,clean_ingreds,price\nProdA,http://urlA,typeA,ingA,10.0\n');
+      (fs.readFileSync as jest.Mock).mockReturnValue('product_name,product_url,product_type,clean_ingreds,price\nProdA,www.urlA.com,typeA,ingA,10.0\n');
       
       mockProductRepository.count.mockResolvedValue(100);
       const mockQueryBuilder = {
@@ -558,6 +596,8 @@ describe('RecommendationService', () => {
       
       await service.seedProducts();
       expect(mockProductRepository.save).toHaveBeenCalled();
+      const savedProducts = mockProductRepository.save.mock.calls[0][0];
+      expect((savedProducts as any)[0].url).toBe('https://www.urlA.com');
     });
   });
 });

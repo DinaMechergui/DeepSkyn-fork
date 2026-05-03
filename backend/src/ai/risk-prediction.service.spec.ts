@@ -116,5 +116,76 @@ describe('RiskPredictionService', () => {
       expect(result).toBeDefined();
       expect(result.risks.length).toBeGreaterThan(0);
     });
+
+    it('should calculate correct impacts for low values (uv, pollution, stress)', async () => {
+      const lowInput: SkinRiskInput = {
+        age: 20,
+        wrinklesScore: 50,
+        environment: {
+          uvIndex: 1, // <= 2
+          pollution: 'Low', // 'low'
+        },
+        habits: {
+          stressLevel: 'Low', // 'low'
+        },
+      };
+
+      geminiService.generateContent.mockResolvedValueOnce(null as any);
+      const result = await service.predictSkinRisks(lowInput);
+      expect(result).toBeDefined();
+    });
+
+    it('should add retinoid action for high aging risk', async () => {
+      const highAgingInput: SkinRiskInput = {
+        wrinklesScore: 80, // >= 45
+        age: 40,
+        acneScore: 0,
+        drynessScore: 0,
+        sensitivityScore: 0,
+        pigmentationScore: 0,
+        habits: {
+          sleepHours: 8,
+          stressLevel: 'Low',
+          waterIntake: 3,
+        }
+      };
+
+      const mockJsonResponse = JSON.stringify({
+        risks: [
+          {
+            type: 'aging',
+            risk_score: 80,
+            cause: 'Age and wrinkles',
+            prevention: ['Use retinoid'],
+            urgency: 'high',
+            timeline: 'weeks',
+          },
+        ],
+        summary: 'A short summary.',
+        immediate_actions: [], // Empty to trigger buildPersonalizedActions
+      });
+
+      geminiService.generateContent.mockResolvedValueOnce(
+        `Here is the result:\n\`\`\`json\n${mockJsonResponse}\n\`\`\``,
+      );
+      
+      const result = await service.predictSkinRisks(highAgingInput);
+      expect(result.immediate_actions.some(a => a.includes('retinoid'))).toBeTruthy();
+    });
+
+    it('should use fallback when parsed response has empty risks array', async () => {
+      const mockJsonResponse = JSON.stringify({
+        risks: [],
+        summary: 'No risks.',
+        immediate_actions: [],
+      });
+
+      geminiService.generateContent.mockResolvedValueOnce(
+        `Here is the result:\n\`\`\`json\n${mockJsonResponse}\n\`\`\``,
+      );
+
+      const result = await service.predictSkinRisks(mockInput);
+      expect(result.risks.length).toBeGreaterThan(0); // Because fallback generates risks
+    });
   });
 });

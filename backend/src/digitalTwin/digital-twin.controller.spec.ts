@@ -47,9 +47,29 @@ describe('DigitalTwinController', () => {
       expect(res.id).toBe('tw1');
     });
 
+    it('should throw if no baseAnalysisId', async () => {
+      const dto: CreateDigitalTwinDto = { baseAnalysisId: '' };
+      const req = { user: { id: 'u1' } };
+      await expect(controller.createDigitalTwin(req, dto)).rejects.toThrow(BadRequestException);
+    });
+
     it('should throw if no user id', async () => {
       const dto: CreateDigitalTwinDto = { baseAnalysisId: '1' };
       const req = { user: {} };
+      await expect(controller.createDigitalTwin(req, dto)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should rethrow BadRequestException from service', async () => {
+      const dto: CreateDigitalTwinDto = { baseAnalysisId: '1' };
+      const req = { user: { id: 'u1' } };
+      mockService.createDigitalTwin.mockRejectedValueOnce(new BadRequestException('Error'));
+      await expect(controller.createDigitalTwin(req, dto)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should wrap general errors in BadRequestException', async () => {
+      const dto: CreateDigitalTwinDto = { baseAnalysisId: '1' };
+      const req = { user: { id: 'u1' } };
+      mockService.createDigitalTwin.mockRejectedValueOnce(new Error('General error'));
       await expect(controller.createDigitalTwin(req, dto)).rejects.toThrow(BadRequestException);
     });
   });
@@ -68,6 +88,17 @@ describe('DigitalTwinController', () => {
       const res = await controller.getLatestDigitalTwin(req);
       expect((res as any).message).toBeDefined();
     });
+
+    it('should throw if no user id', async () => {
+      const req = { user: {} };
+      await expect(controller.getLatestDigitalTwin(req)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should wrap general errors in BadRequestException', async () => {
+      const req = { user: { id: 'u1' } };
+      mockService.getLatestDigitalTwin.mockRejectedValueOnce(new Error('General error'));
+      await expect(controller.getLatestDigitalTwin(req)).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe('getTimeline', () => {
@@ -77,6 +108,22 @@ describe('DigitalTwinController', () => {
       const res = await controller.getTimeline(req, 'tw1');
       expect(res).toBeDefined();
     });
+
+    it('should throw if no id', async () => {
+      const req = { user: { id: 'u1' } };
+      await expect(controller.getTimeline(req, '')).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw if no user id', async () => {
+      const req = { user: {} };
+      await expect(controller.getTimeline(req, 'tw1')).rejects.toThrow(BadRequestException);
+    });
+
+    it('should wrap general errors in BadRequestException', async () => {
+      const req = { user: { id: 'u1' } };
+      mockService.getDigitalTwinTimeline.mockRejectedValueOnce(new Error('General error'));
+      await expect(controller.getTimeline(req, 'tw1')).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe('getDigitalTwin', () => {
@@ -85,6 +132,22 @@ describe('DigitalTwinController', () => {
       const req = { user: { id: 'u1' } };
       const res = await controller.getDigitalTwin(req, 'tw1');
       expect(res).toBeDefined();
+    });
+
+    it('should throw if no id', async () => {
+      const req = { user: { id: 'u1' } };
+      await expect(controller.getDigitalTwin(req, '')).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw if no user id', async () => {
+      const req = { user: {} };
+      await expect(controller.getDigitalTwin(req, 'tw1')).rejects.toThrow(BadRequestException);
+    });
+
+    it('should wrap general errors in BadRequestException', async () => {
+      const req = { user: { id: 'u1' } };
+      mockService.getDigitalTwin.mockRejectedValueOnce(new Error('General error'));
+      await expect(controller.getDigitalTwin(req, 'tw1')).rejects.toThrow(BadRequestException);
     });
   });
 });

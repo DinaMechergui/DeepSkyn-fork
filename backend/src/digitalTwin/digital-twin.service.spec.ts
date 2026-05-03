@@ -183,6 +183,20 @@ describe('DigitalTwinService', () => {
       expect(res.trends.overallTrajectory).toBe('stable');
     });
 
+    it('should throw if twin not found for timeline', async () => {
+      mockRepo.findOne.mockResolvedValueOnce(null);
+      await expect(service.getDigitalTwinTimeline('tw1', 'u1')).rejects.toThrow('Digital twin not found');
+    });
+
+    it('should throw if base analysis not found for timeline', async () => {
+      mockRepo.findOne.mockResolvedValueOnce({
+        id: 'tw1',
+        baseAnalysisId: 'a1',
+      });
+      mockRepo.findOne.mockResolvedValueOnce(null);
+      await expect(service.getDigitalTwinTimeline('tw1', 'u1')).rejects.toThrow('Base analysis not found');
+    });
+
     it('should generate overall recommendation for mid-range score', () => {
       const predictions = {
         month1: { skinScore: 60, improvements: [] } as any,
@@ -204,6 +218,17 @@ describe('DigitalTwinService', () => {
       const res = (service as any).generateOverallRecommendation(predictions);
       expect(res).toContain('consulting with a dermatologist');
     });
+
+    it('should generate overall recommendation for high-range score', () => {
+      const predictions = {
+        month1: { skinScore: 70, improvements: ['acne'] } as any,
+        month3: { skinScore: 80, improvements: ['texture'] } as any,
+        month6: { skinScore: 90, improvements: ['glow'] } as any,
+      };
+
+      const res = (service as any).generateOverallRecommendation(predictions);
+      expect(res).toContain('Excellent long-term outlook');
+    });
   });
 
   describe('getLatestDigitalTwin', () => {
@@ -212,6 +237,35 @@ describe('DigitalTwinService', () => {
       const res = await service.getLatestDigitalTwin('u1');
       expect(res).toBeDefined();
       expect(mockRepo.findOne).toHaveBeenCalledWith({ where: { userId: 'u1' }, order: { createdAt: 'DESC' } });
+    });
+  });
+
+  describe('getDigitalTwin', () => {
+    it('should return the digital twin', async () => {
+      mockRepo.findOne.mockResolvedValueOnce({ id: 'tw1', userId: 'u1' });
+      const res = await service.getDigitalTwin('tw1', 'u1');
+      expect(res).toBeDefined();
+    });
+
+    it('should throw if twin not found', async () => {
+      mockRepo.findOne.mockResolvedValueOnce(null);
+      await expect(service.getDigitalTwin('tw1', 'u1')).rejects.toThrow('Digital twin not found');
+    });
+  });
+
+  describe('parseMonthPrediction', () => {
+    it('should handle missing AI data and use fallback', () => {
+      const baseAnalysis = { skinScore: 50, skinAge: 30, hydration: 50, oil: 50, acne: 50, wrinkles: 50 };
+      const res = (service as any).parseMonthPrediction(null, 'month1', baseAnalysis);
+      expect(res.skinScore).toBeGreaterThanOrEqual(50);
+    });
+  });
+
+  describe('buildSimulationContext', () => {
+    it('should handle empty lifestyle factors', () => {
+      const baseAnalysis = { skinScore: 50, skinAge: 30, hydration: 50, oil: 50, acne: 50, wrinkles: 50 };
+      const res = (service as any).buildSimulationContext(baseAnalysis, [], 'high', []);
+      expect(res).toContain('Standard lifestyle');
     });
   });
 });

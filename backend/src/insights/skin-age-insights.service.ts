@@ -186,23 +186,6 @@ export class SkinAgeInsightsService {
     return 'Normal';
   }
 
-  private async getBirthDate(userId: string): Promise<Date | null> {
-    const user = await this.userRepo.findOne({ where: { id: userId } });
-    if (user?.birthDate) return new Date(user.birthDate);
-
-    const profile = await this.profileRepo.findOne({ where: { userId } });
-    if (profile?.birthDate) return new Date(profile.birthDate);
-    return null;
-  }
-
-  private calculateRealAge(birthDate: Date | null): number | null {
-    if (!birthDate) return null;
-    const ts = birthDate.getTime();
-    if (Number.isNaN(ts)) return null;
-    const ageMs = Date.now() - ts;
-    const years = Math.floor(ageMs / (1000 * 60 * 60 * 24 * 365.25));
-    return Number.isFinite(years) ? years : null;
-  }
 
   private computeUserStats(series: { skinAge: number | null; realAge: number | null }[]) {
     const valid = series.filter(item => item.skinAge != null && item.realAge != null) as { skinAge: number; realAge: number }[];

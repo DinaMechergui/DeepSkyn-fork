@@ -113,5 +113,46 @@ describe('SkinAgeInsightsService', () => {
       await service.getInsights('u1');
       expect(mockRecommendationService.getRecommendationsForSkinState).toHaveBeenCalledWith('u1', '1', 'Dry');
     });
+
+    it('should cover sensitive skin type inference', async () => {
+      mockSkinMetricService.getUserSkinAgeSeries.mockResolvedValueOnce([
+        { id: '1', createdAt: new Date(), skinAge: 35, realAge: 30, skinScore: 70, hydration: 50, acne: 40, wrinkles: 30, oil: 10 },
+      ]);
+      mockRecommendationService.getRecommendationsForSkinState.mockResolvedValueOnce([]);
+      await service.getInsights('u1');
+      expect(mockRecommendationService.getRecommendationsForSkinState).toHaveBeenCalledWith('u1', '1', 'Sensitive');
+    });
+
+    it('should cover normal skin type inference when sensitive returns false', async () => {
+      mockSkinMetricService.getUserSkinAgeSeries.mockResolvedValueOnce([
+        { id: '1', createdAt: new Date(), skinAge: 30, realAge: 30, skinScore: 70, hydration: 50, acne: 20, wrinkles: 30, oil: 10 },
+      ]);
+      mockRecommendationService.getRecommendationsForSkinState.mockResolvedValueOnce([]);
+      await service.getInsights('u1');
+      expect(mockRecommendationService.getRecommendationsForSkinState).toHaveBeenCalledWith('u1', '1', 'Normal');
+    });
+  });
+
+  describe('Edge cases', () => {
+    it('should handle missing realAge gracefully', async () => {
+      mockSkinMetricService.getUserSkinAgeSeries.mockResolvedValueOnce([
+        { id: '1', createdAt: new Date(), skinAge: 30, realAge: null, skinScore: 70, hydration: 50, acne: 20, wrinkles: 30, oil: 30 },
+      ]);
+      mockRecommendationService.getRecommendationsForSkinState.mockResolvedValueOnce([]);
+      
+      const res = await service.getInsights('u1');
+      expect(res.delta).toBeNull();
+      expect(res.status).toBe('unknown');
+    });
+
+    it('should provide weak hydration advice', async () => {
+      mockSkinMetricService.getUserSkinAgeSeries.mockResolvedValueOnce([
+        { id: '1', createdAt: new Date(), skinAge: 30, realAge: 30, skinScore: 70, hydration: 50, acne: 20, wrinkles: 30, oil: 30 },
+      ]);
+      mockRecommendationService.getRecommendationsForSkinState.mockResolvedValueOnce([]);
+      
+      const res = await service.getInsights('u1');
+      expect(res.advice.some(a => a.includes('Hydratation faible'))).toBeTruthy();
+    });
   });
 });
