@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
     Sparkles, Zap, AlertCircle, GitCompare,
     CheckCircle, RefreshCw, Activity,
@@ -179,8 +179,18 @@ function ScoreRing({ score, size = 140 }: { score: number; size?: number }) {
     const circumference = 2 * Math.PI * r;
     const filled = ((100 - score) / 100) * circumference;
     const { t } = useTranslation();
-    const color = score >= 75 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
-    const label = score >= 75 ? t('analysis.optimal') : score >= 50 ? t('analysis.moderate') : t('analysis.critical');
+    const getColor = (s: number) => {
+        if (s >= 75) return '#10b981';
+        if (s >= 50) return '#f59e0b';
+        return '#ef4444';
+    };
+    const getLabel = (s: number) => {
+        if (s >= 75) return t('analysis.optimal');
+        if (s >= 50) return t('analysis.moderate');
+        return t('analysis.critical');
+    };
+    const color = getColor(score);
+    const label = getLabel(score);
 
     return (
         <div style={{ position: 'relative', width: size, height: size }}>
@@ -233,21 +243,22 @@ function ConditionBar({ condition, onSelect }: { condition: ConditionScore; onSe
 
     const isEvaluated = typeof condition.score === 'number';
     const scoreValue = isEvaluated ? (condition.score as number) : 0;
-    const scoreColor = !isEvaluated
-        ? '#94a3b8'
-        : scoreValue >= 75
-            ? '#10b981'
-            : scoreValue >= 50
-                ? '#f59e0b'
-                : '#ef4444';
+    
+    const getScoreColor = () => {
+        if (!isEvaluated) return '#94a3b8';
+        if (scoreValue >= 75) return '#10b981';
+        if (scoreValue >= 50) return '#f59e0b';
+        return '#ef4444';
+    };
+    const scoreColor = getScoreColor();
 
-    const interpretation = !isEvaluated
-        ? t('analysis.unavailable')
-        : scoreValue >= 75
-            ? `${t('analysis.optimal')} : ${t('analysis.interpretation.optimal')}`
-            : scoreValue >= 50
-                ? `${t('analysis.moderate')} : ${t('analysis.interpretation.moderate')}`
-                : `${t('analysis.critical')} : ${t('analysis.interpretation.critical')}`;
+    const getInterpretation = () => {
+        if (!isEvaluated) return t('analysis.unavailable');
+        if (scoreValue >= 75) return `${t('analysis.optimal')} : ${t('analysis.interpretation.optimal')}`;
+        if (scoreValue >= 50) return `${t('analysis.moderate')} : ${t('analysis.interpretation.moderate')}`;
+        return `${t('analysis.critical')} : ${t('analysis.interpretation.critical')}`;
+    };
+    const interpretation = getInterpretation();
 
     const Icon = meta.icon;
 
@@ -649,6 +660,15 @@ export default function SkinAnalysisPage() {
     const [selectedCondition, setSelectedCondition] = useState<ConditionScore | null>(null);
     const [routineResult, setRoutineResult] = useState<SvrRoutineResult | null>(null);
     const [routineError, setRoutineError] = useState<boolean>(false);
+
+    const sortedConditions = useMemo(() => {
+        if (!result?.conditionScores) return [];
+        return [...result.conditionScores].sort((a, b) => {
+            const sa = typeof a.score === 'number' ? a.score : Number.POSITIVE_INFINITY;
+            const sb = typeof b.score === 'number' ? b.score : Number.POSITIVE_INFINITY;
+            return sa - sb;
+        });
+    }, [result?.conditionScores]);
 
     useEffect(() => {
         const user = getUser();
@@ -1274,7 +1294,7 @@ export default function SkinAnalysisPage() {
 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 16 }}>
                                     {profile.imagesBase64?.map((img, idx) => (
-                                        <div key={idx} style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', height: 160, border: '2px solid #e2e8f0', boxShadow: '0 8px 16px rgba(0,0,0,0.12)', transition: 'all 0.3s' }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.18)'; e.currentTarget.style.borderColor = '#0d9488'; }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.12)'; e.currentTarget.style.borderColor = '#e2e8f0'; }}>
+                                        <div key={`preview-${idx}-${img.substring(0, 20)}`} style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', height: 160, border: '2px solid #e2e8f0', boxShadow: '0 8px 16px rgba(0,0,0,0.12)', transition: 'all 0.3s' }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.18)'; e.currentTarget.style.borderColor = '#0d9488'; }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.12)'; e.currentTarget.style.borderColor = '#e2e8f0'; }}>
                                             <img
                                                 src={img}
                                                 alt={`Preview ${idx + 1}`}
@@ -1611,16 +1631,9 @@ export default function SkinAnalysisPage() {
                                         </div>
                                     )}
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                        {result.conditionScores
-                                            .sort((a, b) => {
-                                                const sa = typeof a.score === 'number' ? a.score : Number.POSITIVE_INFINITY;
-                                                const sb = typeof b.score === 'number' ? b.score : Number.POSITIVE_INFINITY;
-                                                return sa - sb;
-                                            })
-                                            .map(condition => (
-                                                <ConditionBar key={condition.type} condition={condition} onSelect={setSelectedCondition} />
-                                            ))
-                                        }
+                                        {sortedConditions.map(condition => (
+                                            <ConditionBar key={condition.type} condition={condition} onSelect={setSelectedCondition} />
+                                        ))}
                                     </div>
                                 </div>
 
@@ -1972,7 +1985,7 @@ export default function SkinAnalysisPage() {
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                                         {routineResult.morning.map((step, i) => (
-                                            <div key={i} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', background: '#fcfcfd' }}>
+                                            <div key={`morning-step-${step.stepName}-${i}`} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', background: '#fcfcfd' }}>
                                                 <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#0369a1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{i + 1}</div>
                                                 <div style={{ flex: 1 }}>
                                                     <div style={{ fontSize: 14, fontWeight: 800, color: '#1e293b' }}>{step.stepName} — <span style={{ color: '#0369a1' }}>{step.product?.name || t('analysis.pdf.recommended_product', { defaultValue: 'Produit recommandé' })}</span></div>
@@ -1993,7 +2006,7 @@ export default function SkinAnalysisPage() {
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                                         {routineResult.night.map((step, i) => (
-                                            <div key={i} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', background: '#fcfcfd' }}>
+                                            <div key={`night-step-${step.stepName}-${i}`} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', background: '#fcfcfd' }}>
                                                 <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#5b21b6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{i + 1}</div>
                                                 <div style={{ flex: 1 }}>
                                                     <div style={{ fontSize: 14, fontWeight: 800, color: '#1e293b' }}>{step.stepName} — <span style={{ color: '#5b21b6' }}>{step.product?.name || t('analysis.pdf.recommended_product', { defaultValue: 'Produit recommandé' })}</span></div>

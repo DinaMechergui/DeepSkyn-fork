@@ -65,6 +65,29 @@ export default function ProfilePage() {
     if (!accessToken) navigate("/auth/login", { replace: true })
   }, [accessToken, navigate])
 
+  const initializeFormFields = (userData: any) => {
+    const initialFirstName = userData.firstName ?? "";
+    const initialLastName = userData.lastName ?? "";
+    const initialBio = userData.bio ?? "";
+    const initialBirth = userData.birthDate ? userData.birthDate.slice(0, 10) : "";
+
+    if (!initialFirstName && !initialLastName && userData.name) {
+      const nameParts = userData.name.split(' ');
+      setFirstName(nameParts[0] || "");
+      setLastName(nameParts.slice(1).join(' ') || "");
+    } else {
+      setFirstName(initialFirstName);
+      setLastName(initialLastName);
+    }
+
+    setBio(initialBio);
+    setBirthDate(initialBirth);
+
+    if (!(userData.firstName && userData.lastName)) {
+      setIsFirstLogin(true);
+    }
+  }
+
   const loadProfileData = () => {
     setLoadingMe(true);
     setError("");
@@ -75,27 +98,7 @@ export default function ProfilePage() {
       if (userStr) {
         const userData = JSON.parse(userStr);
         setMe(userData);
-
-        const initialFirstName = userData.firstName ?? "";
-        const initialLastName = userData.lastName ?? "";
-        const initialBio = userData.bio ?? "";
-        const initialBirth = userData.birthDate ? userData.birthDate.slice(0, 10) : "";
-
-        if (!initialFirstName && !initialLastName && userData.name) {
-          const nameParts = userData.name.split(' ');
-          setFirstName(nameParts[0] || "");
-          setLastName(nameParts.slice(1).join(' ') || "");
-        } else {
-          setFirstName(initialFirstName);
-          setLastName(initialLastName);
-        }
-
-        setBio(initialBio);
-        setBirthDate(initialBirth);
-
-        if (!(userData.firstName && userData.lastName)) {
-          setIsFirstLogin(true);
-        }
+        initializeFormFields(userData);
       }
     } catch {
       setError("Impossible de joindre le serveur. Vérifie le backend.");

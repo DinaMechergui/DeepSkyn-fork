@@ -229,7 +229,11 @@ export default function ProductsPage() {
         </div>
     )
 
-    const sidebarClass = user ? (isSidebarCollapsed ? "lg:ml-20" : "lg:ml-64") : ""
+    const getSidebarClass = () => {
+        if (!user) return "";
+        return isSidebarCollapsed ? "lg:ml-20" : "lg:ml-64";
+    };
+    const sidebarClass = getSidebarClass();
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-indigo-50">

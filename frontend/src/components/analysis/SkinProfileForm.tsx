@@ -146,6 +146,24 @@ const getSensitivityLabel = (level: string) => {
     }
 };
 
+const getRednessCircleClass = (level: string) => {
+    if (level === 'occasional') return 'bg-rose-200';
+    if (level === 'persistent') return 'bg-rose-400';
+    return 'bg-rose-600 animate-pulse';
+};
+
+const getAcneTypeBoost = (type: string) => {
+    if (type === 'cystic') return 10;
+    if (type === 'hormonal') return 6;
+    return 0;
+};
+
+const getPoresZoneBoost = (zone: string) => {
+    if (zone === 'all') return 10;
+    if (zone === 'tzone') return 6;
+    return 0;
+};
+
 /** Detail Components to reduce complexity */
 
 const AcneDetails = ({ data, setSingle, toggleMultiSelect }: { data: any, setSingle: any, toggleMultiSelect: any }) => (
@@ -496,10 +514,7 @@ const RednessDetails = ({ data, setSingle, toggleMultiSelect }: { data: any, set
                     >
                         <div className={`h-8 w-8 rounded-full border-2 flex items-center justify-center ${data.level === level ? 'border-rose-200 bg-rose-50' : 'border-slate-100 bg-slate-50'
                             }`}>
-                            <div className={`h-5 w-5 rounded-full filter blur-[1px] ${level === 'occasional' ? 'bg-rose-200' :
-                                level === 'persistent' ? 'bg-rose-400' :
-                                    'bg-rose-600 animate-pulse'
-                                }`} />
+                            <div className={`h-5 w-5 rounded-full filter blur-[1px] ${getRednessCircleClass(level)}`} />
                         </div>
                         <span className={`text-[10px] font-bold ${data.level === level ? 'text-rose-700' : ''}`}>
                             {REDNESS_INTENSITY_LABELS[level]}
@@ -540,7 +555,7 @@ export const SkinProfileForm: React.FC<SkinProfileFormProps> = ({ profile, setPr
         const calculateAcneBoost = (item: any) => {
             if (!item.enabled) return { base: undefined, boost: 0 };
             const base = getAcneBase(item.severity || '');
-            const boost = (item.type === 'cystic' ? 10 : item.type === 'hormonal' ? 6 : 0) + (item.location?.length || 0) * 3;
+            const boost = getAcneTypeBoost(item.type) + (item.location?.length || 0) * 3;
             return { base, boost };
         };
 
@@ -561,7 +576,7 @@ export const SkinProfileForm: React.FC<SkinProfileFormProps> = ({ profile, setPr
         const calculatePoresBoost = (item: any) => {
             if (!item.enabled) return { base: undefined, boost: 0 };
             const base = getPoresBase(item.visibility || '');
-            const boost = item.zone === 'all' ? 10 : item.zone === 'tzone' ? 6 : 0;
+            const boost = getPoresZoneBoost(item.zone);
             return { base, boost };
         };
 

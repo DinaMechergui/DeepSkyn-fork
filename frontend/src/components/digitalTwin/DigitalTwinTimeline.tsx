@@ -18,6 +18,8 @@ interface TimelineProps {
   timeline: DigitalTwinTimelineDto;
 }
 
+type ScoreTrend = 'up' | 'down' | 'stable';
+
 export const DigitalTwinTimeline: React.FC<TimelineProps> = ({ timeline }) => {
   const [speakingSection, setSpeakingSection] = useState<'current' | 'projected' | null>(null);
   const { currentState, predictions, trends } = timeline;
@@ -34,20 +36,20 @@ export const DigitalTwinTimeline: React.FC<TimelineProps> = ({ timeline }) => {
     return THEME.danger;
   };
 
-  const getScoreTrend = (current: number, future: number): 'up' | 'down' | 'stable' => {
+  const getScoreTrend = (current: number, future: number): ScoreTrend => {
     const diff = future - current;
     if (diff > 5) return 'up';
     if (diff < -5) return 'down';
     return 'stable';
   };
 
-  const getTrendColor = (trend: 'up' | 'down' | 'stable') => {
+  const getTrendColor = (trend: ScoreTrend) => {
     if (trend === 'up') return THEME.success;
     if (trend === 'down') return THEME.danger;
     return THEME.textSecondary;
   };
 
-  const getTrendIcon = (trend: 'up' | 'down' | 'stable') => {
+  const getTrendIcon = (trend: ScoreTrend) => {
     if (trend === 'up') return TrendingUp;
     if (trend === 'down') return TrendingDown;
     return Minus;

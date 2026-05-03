@@ -230,7 +230,11 @@ export const authFetch = async (url: string, options: RequestInit = {}): Promise
   }
 
   // Ensure the URL is absolute by prepending API_URL if it's a relative path
-  const finalUrl = url.startsWith('http') ? url : `${API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+  let finalUrl = url;
+  if (!url.startsWith('http')) {
+    const separator = url.startsWith('/') ? '' : '/';
+    finalUrl = `${API_URL}${separator}${url}`;
+  }
 
   let res = await fetch(finalUrl, { ...options, headers, credentials: 'include' })
 

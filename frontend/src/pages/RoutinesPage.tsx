@@ -96,78 +96,69 @@ export default function RoutinesPage() {
     })
   }
 
+  const initializeRoutine = async () => {
+    try {
+      const subData = await apiGet<any>(`/subscription/${userId}`).catch(() => ({ plan: 'FREE' }));
+      setCurrentPlan(subData?.plan || 'FREE');
+
+      const routineRes = await authFetch(`/routine/${userId}`, { method: "GET" });
+      if (routineRes.ok) {
+        const routineData = await routineRes.json();
+        if (!personalizationResult && routineData) {
+          setPersonalizationResult({
+            message: "Routine chargée",
+            personalizationId: "initial",
+            inferredSkinType: routineData.inferredSkinType || latestAnalysis?.aiRawResponse?.globalAnalysis?.dominantCondition || "Normal",
+            analysisCount: 1,
+            trends: {
+              hydration: { current: 50, previous: 50, delta: 0, trend: 'stable' },
+              oil: { current: 50, previous: 50, delta: 0, trend: 'stable' },
+              acne: { current: 50, previous: 50, delta: 0, trend: 'stable' },
+              wrinkles: { current: 50, previous: 50, delta: 0, trend: 'stable' },
+              globalScoreTrend: 'stable'
+            },
+            adjustments: [],
+            routine: routineData.routine || routineData
+          } as any);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to initialize routine", err);
+    }
+  };
+
+  const fetchLatestAnalysis = async () => {
+    try {
+      const res = await authFetch(`/analysis/user?limit=1`, { method: "GET" });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data?.data?.length > 0) {
+        const fullRes = await authFetch(`/analysis/${data.data[0].id}`, { method: "GET" });
+        if (fullRes.ok) setLatestAnalysis(await fullRes.json());
+      }
+    } catch (err) {
+      console.error("Failed to fetch latest analysis", err);
+    }
+  };
+
+  const fetchInsights = async () => {
+    try {
+      const insightRes = await skinAgeInsightsService.getInsights(userId!).catch(() => null);
+      setSkinAgeInsight(insightRes);
+    } catch (err) {
+      console.error("Failed to fetch insights", err);
+    }
+  };
+
   useEffect(() => {
     if (!userId) {
-      setError("Veuillez vous connecter pour voir votre routine.")
-      return
+      setError("Veuillez vous connecter pour voir votre routine.");
+      return;
     }
-
-    const run = async () => {
-      try {
-        // Fetch subscription first to correctly resolve PRO access
-        const subData = await apiGet<any>(`/subscription/${ userId }`).catch(() => ({ plan: 'FREE' }));
-        setCurrentPlan(subData?.plan || 'FREE');
-
-        // Then fetch routine
-        const routineRes = await authFetch(`/routine/${userId}`, { method: "GET" });
-        if (routineRes.ok) {
-          const routineData = await routineRes.json();
-          // If we don't have a personalization result from history, use the one from the basic routine
-          if (!personalizationResult && routineData) {
-            // We can derive a partial personalization result to satisfy the UI
-            setPersonalizationResult({
-              message: "Routine chargée",
-              personalizationId: "initial",
-              inferredSkinType: routineData.inferredSkinType || latestAnalysis?.aiRawResponse?.globalAnalysis?.dominantCondition || "Normal",
-              analysisCount: 1,
-              trends: {
-                hydration: { current: 50, previous: 50, delta: 0, trend: 'stable' },
-                oil: { current: 50, previous: 50, delta: 0, trend: 'stable' },
-                acne: { current: 50, previous: 50, delta: 0, trend: 'stable' },
-                wrinkles: { current: 50, previous: 50, delta: 0, trend: 'stable' },
-                globalScoreTrend: 'stable'
-              },
-              adjustments: [],
-              routine: routineData.routine || routineData
-            } as any);
-          }
-        }
-      } catch (err: any) {
-        console.error("Routine page error:", err);
-      }
-    }
-
-    const fetchLatestAnalysis = async () => {
-      try {
-        const res = await authFetch(`/analysis/user?limit=1`, { method: "GET" });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data && data.data && data.data.length > 0) {
-          const latestId = data.data[0].id;
-          const fullRes = await authFetch(`/analysis/${ latestId }`, { method: "GET" });
-          if (fullRes.ok) {
-            const fullAnalysis = await fullRes.json();
-            setLatestAnalysis(fullAnalysis);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch latest analysis", err);
-      }
-    };
-
-    const fetchInsights = async () => {
-      try {
-        const insightRes = await skinAgeInsightsService.getInsights(userId).catch(() => null);
-        setSkinAgeInsight(insightRes);
-      } catch (err) {
-        console.error("Failed to fetch insights", err);
-      }
-    }
-
-    run()
-    fetchLatestAnalysis()
-    fetchInsights()
-  }, [userId, personalizing])
+    initializeRoutine();
+    fetchLatestAnalysis();
+    fetchInsights();
+  }, [userId, personalizing]);
 
   // Listen for analysis completion and automatically update routine
   useEffect(() => {
