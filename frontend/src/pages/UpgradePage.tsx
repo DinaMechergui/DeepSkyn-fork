@@ -258,9 +258,9 @@ function CheckoutModal({ plan, onClose, onSuccess }: CheckoutModalProps) {
             )}
           </button>
 
-          <p className="text-center text-xs text-slate-400 flex items-center justify-center gap-1">
+          <div className="text-center text-xs text-slate-400 flex items-center justify-center gap-1">
             <Lock size={11} /> Paiement sécurisé SSL 256-bit · Annulable à tout moment
-          </p>
+          </div>
         </form>
       </div>
     </div>
