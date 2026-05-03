@@ -222,6 +222,7 @@ export function ConditionBar({ condition, onSelect }: { condition: ConditionScor
     return (
         <div
             className="skin-condition-bar"
+            data-testid={`condition-bar-${condition.type}`}
             onClick={() => onSelect?.(condition)}
             style={{
                 background: '#ffffff', border: '1px solid #f1f5f9',
@@ -288,7 +289,7 @@ export function ConditionDetailDrawer({ condition, result, onClose }: { conditio
 
     return (
         <div className="drawer-overlay fade-in" onClick={onClose}>
-            <div className="drawer-content slide-up" onClick={e => e.stopPropagation()}>
+            <div className="drawer-content slide-up" role="dialog" onClick={e => e.stopPropagation()}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <div style={{ width: 48, height: 48, borderRadius: 16, background: `${meta.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: meta.color }}>

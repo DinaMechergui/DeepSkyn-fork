@@ -47,6 +47,7 @@ vi.mock('lucide-react', () => {
     Sun: (props: any) => <Icon {...props} data-testid="sun-icon" />,
     Moon: (props: any) => <Icon {...props} data-testid="moon-icon" />,
     UserCircle: (props: any) => <Icon {...props} data-testid="userc-icon" />,
+    ChevronRight: (props: any) => <Icon {...props} data-testid="chevronright-icon" />,
   };
 });
 

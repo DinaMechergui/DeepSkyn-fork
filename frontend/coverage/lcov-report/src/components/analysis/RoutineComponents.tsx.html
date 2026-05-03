@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for src/components/dashboard/GaugeChart.tsx</title>
+    <title>Code coverage report for src/components/analysis/RoutineComponents.tsx</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../../../prettify.css" />
     <link rel="stylesheet" href="../../../base.css" />
@@ -19,13 +19,13 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../../index.html">All files</a> / <a href="index.html">src/components/dashboard</a> GaugeChart.tsx</h1>
+        <h1><a href="../../../index.html">All files</a> / <a href="index.html">src/components/analysis</a> RoutineComponents.tsx</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/42</span>
+                <span class='fraction'>0/41</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/42</span>
+                <span class='fraction'>0/41</span>
             </div>
         
             
@@ -116,35 +116,19 @@
 <a name='L51'></a><a href='#L51'>51</a>
 <a name='L52'></a><a href='#L52'>52</a>
 <a name='L53'></a><a href='#L53'>53</a>
-<a name='L54'></a><a href='#L54'>54</a>
-<a name='L55'></a><a href='#L55'>55</a>
-<a name='L56'></a><a href='#L56'>56</a>
-<a name='L57'></a><a href='#L57'>57</a>
-<a name='L58'></a><a href='#L58'>58</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L54'></a><a href='#L54'>54</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -156,7 +140,7 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -175,65 +159,69 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import React from 'react';
+<span class="cstat-no" title="statement not covered" >import {</span>
+    Sun, Moon, Sparkles, ChevronDown, ChevronUp,
+    Loader2, Lock, ArrowUpRight, Info, CheckCircle, AlertCircle,
+    Droplets, Star, Zap,
+} from 'lucide-react';
+import type { SvrRoutineStep, SvrRecommendedProduct } from '../../services/svrRoutineService';
 &nbsp;
-interface GaugeChartProps {
-  value: number;
-  max: number;
-  label: string;
-  color?: string;
-}
-&nbsp;
-<span class="cstat-no" title="statement not covered" >export const GaugeChart: React.FC&lt;GaugeChartProps&gt; = ({</span>
-<span class="cstat-no" title="statement not covered" >  value,</span>
-<span class="cstat-no" title="statement not covered" >  max,</span>
-<span class="cstat-no" title="statement not covered" >  label,</span>
-<span class="cstat-no" title="statement not covered" >  color = '#3B82F6',</span>
-<span class="cstat-no" title="statement not covered" >}) =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >  const percentage = (value / max) * 100;</span>
-&nbsp;
-<span class="cstat-no" title="statement not covered" >  return (</span>
-<span class="cstat-no" title="statement not covered" >    &lt;div className="flex flex-col items-center"&gt;</span>
-<span class="cstat-no" title="statement not covered" >      &lt;div className="relative w-32 h-16"&gt;</span>
-        {/* Background arc */}
-<span class="cstat-no" title="statement not covered" >        &lt;svg</span>
-<span class="cstat-no" title="statement not covered" >          className="absolute inset-0 w-full h-full"</span>
-<span class="cstat-no" title="statement not covered" >          viewBox="0 0 120 60"</span>
-        &gt;
-<span class="cstat-no" title="statement not covered" >          &lt;path</span>
-<span class="cstat-no" title="statement not covered" >            d="M 10 50 A 50 50 0 0 1 110 50"</span>
-<span class="cstat-no" title="statement not covered" >            fill="none"</span>
-<span class="cstat-no" title="statement not covered" >            stroke="#E5E7EB"</span>
-<span class="cstat-no" title="statement not covered" >            strokeWidth="10"</span>
-<span class="cstat-no" title="statement not covered" >            strokeLinecap="round"</span>
-<span class="cstat-no" title="statement not covered" >          /&gt;</span>
-          {/* Value arc */}
-<span class="cstat-no" title="statement not covered" >          &lt;path</span>
-<span class="cstat-no" title="statement not covered" >            d="M 10 50 A 50 50 0 0 1 110 50"</span>
-<span class="cstat-no" title="statement not covered" >            fill="none"</span>
-<span class="cstat-no" title="statement not covered" >            stroke={color}</span>
-<span class="cstat-no" title="statement not covered" >            strokeWidth="10"</span>
-<span class="cstat-no" title="statement not covered" >            strokeLinecap="round"</span>
-<span class="cstat-no" title="statement not covered" >            strokeDasharray={`${percentage * 1.57} 157`}</span>
-<span class="cstat-no" title="statement not covered" >            transform="rotate(-90 60 50)"</span>
-<span class="cstat-no" title="statement not covered" >          /&gt;</span>
-<span class="cstat-no" title="statement not covered" >        &lt;/svg&gt;</span>
-        {/* Center text */}
-<span class="cstat-no" title="statement not covered" >        &lt;div className="absolute inset-0 flex items-center justify-center"&gt;</span>
-<span class="cstat-no" title="statement not covered" >          &lt;div className="text-center"&gt;</span>
-<span class="cstat-no" title="statement not covered" >            &lt;span className="text-xl font-bold text-gray-900"&gt;</span>
-<span class="cstat-no" title="statement not covered" >              {value.toFixed(0)}</span>
-<span class="cstat-no" title="statement not covered" >            &lt;/span&gt;</span>
-<span class="cstat-no" title="statement not covered" >            &lt;span className="text-xs text-gray-500 block"&gt;/{max}&lt;/span&gt;</span>
-<span class="cstat-no" title="statement not covered" >          &lt;/div&gt;</span>
-<span class="cstat-no" title="statement not covered" >        &lt;/div&gt;</span>
-<span class="cstat-no" title="statement not covered" >      &lt;/div&gt;</span>
-<span class="cstat-no" title="statement not covered" >      &lt;p className="mt-2 text-sm text-gray-600"&gt;{label}&lt;/p&gt;</span>
-<span class="cstat-no" title="statement not covered" >    &lt;/div&gt;</span>
-  );
+/* ─── Category colour map ────────────────────────────────────────── */
+<span class="cstat-no" title="statement not covered" >export const CAT_META: Record&lt;string, { label: string; color: string; bg: string; emoji: string }&gt; = {</span>
+<span class="cstat-no" title="statement not covered" >    cleanser: { label: 'Nettoyant', color: '#0891b2', bg: 'rgba(8,145,178,0.08)', emoji: '🧼' },</span>
+<span class="cstat-no" title="statement not covered" >    toner: { label: 'Tonique', color: '#7c3aed', bg: 'rgba(124,58,237,0.08)', emoji: '💦' },</span>
+<span class="cstat-no" title="statement not covered" >    serum: { label: 'Sérum', color: '#0d9488', bg: 'rgba(13,148,136,0.08)', emoji: '💧' },</span>
+<span class="cstat-no" title="statement not covered" >    moisturizer: { label: 'Hydratant', color: '#2563eb', bg: 'rgba(37,99,235,0.08)', emoji: '🫧' },</span>
+<span class="cstat-no" title="statement not covered" >    sunscreen: { label: 'Écran Solaire', color: '#d97706', bg: 'rgba(217,119,6,0.08)', emoji: '☀️' },</span>
+<span class="cstat-no" title="statement not covered" >    'eye-cream': { label: 'Contour Yeux', color: '#7e22ce', bg: 'rgba(126,34,206,0.08)', emoji: '👁️' },</span>
+<span class="cstat-no" title="statement not covered" >    exfoliant: { label: 'Exfoliant', color: '#b45309', bg: 'rgba(180,83,9,0.08)', emoji: '✨' },</span>
+<span class="cstat-no" title="statement not covered" >    mask: { label: 'Masque', color: '#be185d', bg: 'rgba(190,24,93,0.08)', emoji: '🌿' },</span>
+<span class="cstat-no" title="statement not covered" >    treatment: { label: 'Traitement', color: '#16a34a', bg: 'rgba(22,163,74,0.08)', emoji: '🔬' },</span>
 <span class="cstat-no" title="statement not covered" >};</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >export function getCat(category: string) {</span>
+<span class="cstat-no" title="statement not covered" >    return CAT_META[category] ?? { label: category, color: '#64748b', bg: 'rgba(100,116,139,0.08)', emoji: '🧴' };</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >export const normalizeImageUrl = (url?: string) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    if (!url) return null;</span>
+<span class="cstat-no" title="statement not covered" >    if (url.startsWith('//')) return `https:${url}`;</span>
+<span class="cstat-no" title="statement not covered" >    if (!url.startsWith('http')) return `https://${url}`;</span>
+<span class="cstat-no" title="statement not covered" >    return url;</span>
+<span class="cstat-no" title="statement not covered" >};</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >export const RoutineTabButton = ({ tab, activeTab, onClick, count, t }: { tab: 'morning' | 'night', activeTab: string, onClick: () =&gt; void, count: number, t: any }) =&gt; (</span>
+<span class="cstat-no" title="statement not covered" >    &lt;button onClick={onClick} style={{</span>
+<span class="cstat-no" title="statement not covered" >        display: 'inline-flex', alignItems: 'center', gap: 8,</span>
+<span class="cstat-no" title="statement not covered" >        padding: '10px 22px', borderRadius: 50, border: 'none', cursor: 'pointer',</span>
+<span class="cstat-no" title="statement not covered" >        fontSize: 13, fontWeight: 700, transition: 'all 0.2s',</span>
+<span class="cstat-no" title="statement not covered" >        background: activeTab === tab ? 'linear-gradient(135deg,#0d9488,#6366f1)' : '#f1f5f9',</span>
+<span class="cstat-no" title="statement not covered" >        color: activeTab === tab ? 'white' : '#64748b',</span>
+<span class="cstat-no" title="statement not covered" >        boxShadow: activeTab === tab ? '0 4px 14px rgba(13,148,136,0.3)' : 'none',</span>
+<span class="cstat-no" title="statement not covered" >    }}&gt;</span>
+<span class="cstat-no" title="statement not covered" >        {tab === 'morning' ? &lt;Sun size={15} /&gt; : &lt;Moon size={15} /&gt;}</span>
+<span class="cstat-no" title="statement not covered" >        {tab === 'morning' ? t('svr_routine.morning_tab', { defaultValue: ' Routine Matin (AM)' }) : t('svr_routine.night_tab', { defaultValue: ' Routine Soir (PM)' })}</span>
+<span class="cstat-no" title="statement not covered" >        &lt;span style={{</span>
+<span class="cstat-no" title="statement not covered" >            fontSize: 10, fontWeight: 800,</span>
+<span class="cstat-no" title="statement not covered" >            background: activeTab === tab ? 'rgba(255,255,255,0.25)' : '#e2e8f0',</span>
+<span class="cstat-no" title="statement not covered" >            color: activeTab === tab ? 'white' : '#64748b',</span>
+<span class="cstat-no" title="statement not covered" >            padding: '2px 8px', borderRadius: 99,</span>
+<span class="cstat-no" title="statement not covered" >        }}&gt;</span>
+<span class="cstat-no" title="statement not covered" >            {t('svr_routine.steps_count', { count, defaultValue: 'étapes' })}</span>
+<span class="cstat-no" title="statement not covered" >        &lt;/span&gt;</span>
+<span class="cstat-no" title="statement not covered" >    &lt;/button&gt;</span>
+);
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
