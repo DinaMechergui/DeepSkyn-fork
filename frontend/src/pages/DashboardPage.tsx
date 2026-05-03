@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { dashboardService } from '@/services/dashboardService';
 import { skinAgeInsightsService, type SkinAgeInsightResponse } from '@/services/skinAgeInsightsService';
-import SkinAgeInsightCard from '@/components/insights/SkinAgeInsightCard';
+import { SkinAgeInsightCard } from '@/components/insights/SkinAgeInsightCard';
 import type { DashboardMetrics, MonthlyData } from '@/types/dashboard';
 import { WeatherAdaptiveWidget } from '@/components/dashboard/WeatherAdaptiveWidget';
 import { RiskAlerts } from '@/components/dashboard/RiskAlerts';

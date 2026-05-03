@@ -37,7 +37,7 @@ vi.mock('@/components/dashboard/RiskAlerts', () => ({
   RiskAlerts: () => <div data-testid="risk-alerts" />
 }));
 vi.mock('@/components/insights/SkinAgeInsightCard', () => ({
-  default: () => <div data-testid="skin-age-insight" />
+  SkinAgeInsightCard: () => <div data-testid="skin-age-insight" />
 }));
 
 // Mock services
