@@ -119,7 +119,7 @@ export default function ProductsPage() {
     const sort = SORT_OPTIONS[sortIdx]
 
     // ── Sidebar content (shared between desktop & mobile) ───────────────────────
-    const SidebarContent = () => (
+    const renderSidebarContent = () => (
         <div className="flex flex-col gap-6">
             {/* Header */}
             <div className="flex items-center justify-between">
@@ -229,6 +229,8 @@ export default function ProductsPage() {
         </div>
     )
 
+    const sidebarClass = user ? (isSidebarCollapsed ? "lg:ml-20" : "lg:ml-64") : ""
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-indigo-50">
             <Navbar />
@@ -239,8 +241,7 @@ export default function ProductsPage() {
                         onCollapsedChange={setIsSidebarCollapsed}
                     />
                 )}
-                <div className={`flex-1 transition-all duration-300 ease-in-out ${user ? (isSidebarCollapsed ? "lg:ml-20" : "lg:ml-64") : ""
-                    }`}>
+                <div className={`flex-1 transition-all duration-300 ease-in-out ${sidebarClass}`}>
                     <div className="max-w-7xl mx-auto px-4 py-10">
 
                         {/* ── Page header ──────────────────────────────────────────────────── */}
@@ -294,7 +295,7 @@ export default function ProductsPage() {
                             {/* ── Desktop sidebar ─────────────────────────────────────────────── */}
                             <aside className="hidden lg:flex flex-col w-64 shrink-0">
                                 <div className="sticky top-6 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-                                    <SidebarContent />
+                                    {renderSidebarContent()}
                                 </div>
                             </aside>
 
@@ -329,7 +330,7 @@ export default function ProductsPage() {
                                                 className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none pr-1"
                                             >
                                                 {SORT_OPTIONS.map((o, i) => (
-                                                    <option key={i} value={i}>{o.label}</option>
+                                                    <option key={`${o.field}-${o.dir}`} value={i}>{o.label}</option>
                                                 ))}
                                             </select>
                                         </div>
@@ -397,7 +398,7 @@ export default function ProductsPage() {
                             <X size={16} />
                         </button>
                         <div className="mt-8">
-                            <SidebarContent />
+                            {renderSidebarContent()}
                         </div>
                     </div>
                 </div>

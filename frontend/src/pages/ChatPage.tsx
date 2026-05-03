@@ -54,8 +54,8 @@ const ChatPage: React.FC = () => {
           </div>
         )}
 
-        {messages.map((msg, index) => (
-          <div key={`${msg.role}-${index}`} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+        {messages.map((msg) => (
+          <div key={`${msg.role}-${msg.content.substring(0, 40)}`} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[85%] ${msg.role === 'user' ? 'bg-primary text-white p-3 rounded-2xl rounded-tr-none' : ''}`}>
               {msg.role === 'user' ? (
                 <p className="text-sm">{msg.content}</p>

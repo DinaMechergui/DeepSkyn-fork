@@ -212,15 +212,34 @@ export function useSharedChat(): SharedChatController {
     }
   }, [sessionId, isInitializing, fetchHistory]);
 
+  const getMessageContent = (eventOrMessage?: React.SyntheticEvent | string): string => {
+    if (typeof eventOrMessage === 'string') return eventOrMessage;
+    if (eventOrMessage) eventOrMessage.preventDefault();
+    return input.trim();
+  };
+
+  const handleChatResponse = (res: ChatMessageApiResponse, sid: string) => {
+    setMessages(prev => [...prev, { role: 'assistant', content: res.message || res.response }]);
+    if (res.sessionTitle) {
+      setHistory(prev => prev.map(s =>
+        s.id === sid ? { ...s, title: res.sessionTitle } : s
+      ));
+    }
+    if (res.usage) setUsage(res.usage);
+    setContextHints(buildContextHints(res));
+  };
+
+  const handleChatError = (chatError: any) => {
+    console.error('Chat error:', chatError);
+    const msg = chatError.message?.includes('LIMIT_REACHED')
+      ? 'LIMIT_REACHED'
+      : 'Une erreur est survenue lors de l\'envoi du message.';
+    setError(msg);
+  };
+
   const sendMessage = useCallback(
     async (eventOrMessage?: React.SyntheticEvent | string) => {
-      let messageContent = '';
-      if (typeof eventOrMessage === 'string') {
-        messageContent = eventOrMessage;
-      } else {
-        if (eventOrMessage) eventOrMessage.preventDefault();
-        messageContent = input.trim();
-      }
+      const messageContent = getMessageContent(eventOrMessage);
 
       if (!messageContent || isLoading || !sessionId) return;
 
@@ -236,28 +255,17 @@ export function useSharedChat(): SharedChatController {
         });
 
         if (res.success) {
-          setMessages(prev => [...prev, { role: 'assistant', content: res.message || res.response }]);
-          if (res.sessionTitle) {
-            setHistory(prev => prev.map(s =>
-              s.id === sessionId ? { ...s, title: res.sessionTitle } : s
-            ));
-          }
-          if (res.usage) setUsage(res.usage);
-          setContextHints(buildContextHints(res));
+          handleChatResponse(res, sessionId);
         } else {
           throw new Error('Failed to get response');
         }
       } catch (chatError: any) {
-        console.error('Chat error:', chatError);
-        const msg = chatError.message?.includes('LIMIT_REACHED')
-          ? 'LIMIT_REACHED'
-          : 'Une erreur est survenue lors de l\'envoi du message.';
-        setError(msg);
+        handleChatError(chatError);
       } finally {
         setIsLoading(false);
       }
     },
-    [input, isLoading, sessionId],
+    [input, isLoading, sessionId, buildContextHints],
   );
 
   const deleteSession = useCallback(async (sid: string) => {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { authFetch, getUser } from "@/lib/authSession"
-import { Sparkles, ArrowUpRight, ArrowDownRight, Minus, Lock, Crown, RefreshCw, FileText, Download } from "lucide-react"
+import { Sparkles, ArrowUpRight, ArrowDownRight, Minus, Lock, Crown, RefreshCw, FileText } from "lucide-react"
 import { updateRoutine } from "@/services/routinePersonalizationService"
 import { apiGet } from "@/services/apiClient"
 import { useNavigate } from "react-router-dom"
@@ -14,6 +14,29 @@ import { useTranslation } from "react-i18next"
 
 type RoutineResponse = any
 
+const TrendIcon = ({ trend }: { trend: TrendDetail['trend'] }) => {
+  if (trend === 'improving') return <ArrowUpRight className="text-emerald-500" size={16} />
+  if (trend === 'worsening') return <ArrowDownRight className="text-rose-500" size={16} />
+  return <Minus className="text-slate-400" size={16} />
+}
+
+const TrendCard = ({ label, detail }: { label: string, detail: TrendDetail }) => {
+  const { t } = useTranslation()
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-white p-3 shadow-sm">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t(`routines.${label}`, { defaultValue: label })}</div>
+      <div className="mt-1 flex items-center justify-between">
+        <div className="text-lg font-black text-slate-900">{detail.current}%</div>
+        <div className="flex items-center gap-1">
+          <TrendIcon trend={detail.trend} />
+          <span className={`text-xs font-bold ${detail.delta > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+            {detail.delta > 0 ? '+' : ''}{detail.delta}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function RoutinesPage() {
   const { t } = useTranslation()
@@ -224,26 +247,7 @@ export default function RoutinesPage() {
     }
   }
 
-  const TrendIcon = ({ trend }: { trend: TrendDetail['trend'] }) => {
-    if (trend === 'improving') return <ArrowUpRight className="text-emerald-500" size={16} />
-    if (trend === 'worsening') return <ArrowDownRight className="text-rose-500" size={16} />
-    return <Minus className="text-slate-400" size={16} />
-  }
 
-  const TrendCard = ({ label, detail }: { label: string, detail: TrendDetail }) => (
-    <div className="rounded-2xl border border-slate-100 bg-white p-3 shadow-sm">
-      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t(`routines.${label}`, { defaultValue: label })}</div>
-      <div className="mt-1 flex items-center justify-between">
-        <div className="text-lg font-black text-slate-900">{detail.current}%</div>
-        <div className="flex items-center gap-1">
-          <TrendIcon trend={detail.trend} />
-          <span className={`text-xs font-bold ${detail.delta > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-            {detail.delta > 0 ? '+' : ''}{detail.delta}
-          </span>
-        </div>
-      </div>
-    </div>
-  )
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-indigo-50 py-10 relative">

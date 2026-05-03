@@ -41,6 +41,48 @@ export const DigitalTwinTimeline: React.FC<TimelineProps> = ({ timeline }) => {
     return 'stable';
   };
 
+  const getTrendColor = (trend: 'up' | 'down' | 'stable') => {
+    if (trend === 'up') return THEME.success;
+    if (trend === 'down') return THEME.danger;
+    return THEME.textSecondary;
+  };
+
+  const getTrendIcon = (trend: 'up' | 'down' | 'stable') => {
+    if (trend === 'up') return TrendingUp;
+    if (trend === 'down') return TrendingDown;
+    return Minus;
+  };
+
+  const getCardBg = (isBest: boolean, isWorst: boolean) => {
+    if (isBest) return '#f0fdf4';
+    if (isWorst) return '#fef2f2';
+    return THEME.background;
+  };
+
+  const getCardBorder = (isBest: boolean, isWorst: boolean) => {
+    if (isBest) return THEME.success;
+    if (isWorst) return THEME.danger;
+    return THEME.border;
+  };
+
+  const getTrajectoryDescription = (trajectory: string) => {
+    if (trajectory === 'improvement') return 'Your skin is expected to significantly improve over 6 months.';
+    if (trajectory === 'degradation') return 'Without consistent routine, skin may degrade.';
+    return 'Skin condition is expected to remain stable.';
+  };
+
+  const getTrajectoryBg = (trajectory: string) => {
+    if (trajectory === 'improvement') return '#f0fdf4';
+    if (trajectory === 'degradation') return '#fef2f2';
+    return '#f0f9ff';
+  };
+
+  const getTrajectoryIcon = (trajectory: string) => {
+    if (trajectory === 'improvement') return <TrendingUp size={20} color={THEME.success} />;
+    if (trajectory === 'degradation') return <TrendingDown size={20} color={THEME.danger} />;
+    return <Minus size={20} color="#64748b" />;
+  };
+
   useEffect(() => {
     return () => {
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -177,13 +219,13 @@ export const DigitalTwinTimeline: React.FC<TimelineProps> = ({ timeline }) => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
           {months.map(({ label, value, prediction }) => {
             const trend = getScoreTrend(currentState.skinScore, prediction.skinScore);
-            const trendColor = trend === 'up' ? THEME.success : trend === 'down' ? THEME.danger : THEME.textSecondary;
-            const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
+            const trendColor = getTrendColor(trend);
+            const TrendIcon = getTrendIcon(trend);
             const isBest = value === trends.bestOutcome;
             const isWorst = value === trends.worstOutcome;
 
-            const cardBg = isBest ? '#f0fdf4' : isWorst ? '#fef2f2' : THEME.background;
-            const cardBorder = isBest ? THEME.success : isWorst ? THEME.danger : THEME.border;
+            const cardBg = getCardBg(isBest, isWorst);
+            const cardBorder = getCardBorder(isBest, isWorst);
 
             return (
               <div
@@ -287,32 +329,20 @@ export const DigitalTwinTimeline: React.FC<TimelineProps> = ({ timeline }) => {
                 width: 40,
                 height: 40,
                 borderRadius: '50%',
-                background: (() => {
-                  if (trends.overallTrajectory === 'improvement') return '#f0fdf4';
-                  if (trends.overallTrajectory === 'degradation') return '#fef2f2';
-                  return '#f0f9ff';
-                })(),
+                background: getTrajectoryBg(trends.overallTrajectory),
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              {(() => {
-                if (trends.overallTrajectory === 'improvement') return <TrendingUp size={20} color={THEME.success} />;
-                if (trends.overallTrajectory === 'degradation') return <TrendingDown size={20} color={THEME.danger} />;
-                return <Minus size={20} color="#64748b" />;
-              })()}
+              {getTrajectoryIcon(trends.overallTrajectory)}
             </div>
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: THEME.textPrimary, textTransform: 'capitalize' }}>
                 Overall: {trends.overallTrajectory}
               </div>
               <div style={{ fontSize: 12, color: THEME.textSecondary, marginTop: 2 }}>
-                {trends.overallTrajectory === 'improvement'
-                  ? 'Your skin is expected to significantly improve over 6 months.'
-                  : trends.overallTrajectory === 'degradation'
-                    ? 'Without consistent routine, skin may degrade.'
-                    : 'Skin condition is expected to remain stable.'}
+                {getTrajectoryDescription(trends.overallTrajectory)}
               </div>
             </div>
           </div>

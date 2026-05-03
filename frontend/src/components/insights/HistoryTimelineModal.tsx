@@ -45,6 +45,44 @@ const HistoryTimelineModal: React.FC<HistoryTimelineModalProps> = ({ isOpen, onC
 
     if (!isOpen) return null;
 
+    const renderMainContent = () => {
+        if (loading) {
+            return (
+                <div className="h-full flex flex-col items-center justify-center gap-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0d9488]"></div>
+                    <p className="text-slate-500 font-medium animate-pulse">Gathering history data...</p>
+                </div>
+            );
+        }
+
+        if (error) {
+            return (
+                <div className="h-full flex flex-col items-center justify-center text-center">
+                    <div className="w-20 h-20 rounded-full bg-rose-50 flex items-center justify-center mb-4">
+                        <X className="w-10 h-10 text-rose-500" />
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-900 mb-2">{error}</h3>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="px-6 py-2 bg-[#0d9488] text-white rounded-full font-bold hover:bg-[#0a7a70] transition-all"
+                    >
+                        Retry
+                    </button>
+                </div>
+            );
+        }
+
+        return (
+            <div className="h-full">
+                <TimelineView
+                    data={fullHistory}
+                    height="100%"
+                    showTitle={false}
+                />
+            </div>
+        );
+    };
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 md:p-10">
             {/* Backdrop */}
@@ -79,33 +117,7 @@ const HistoryTimelineModal: React.FC<HistoryTimelineModalProps> = ({ isOpen, onC
 
                 {/* Chart Area */}
                 <div className="flex-1 p-8 overflow-y-auto">
-                    {loading ? (
-                        <div className="h-full flex flex-col items-center justify-center gap-4">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0d9488]"></div>
-                            <p className="text-slate-500 font-medium animate-pulse">Gathering history data...</p>
-                        </div>
-                    ) : error ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center">
-                            <div className="w-20 h-20 rounded-full bg-rose-50 flex items-center justify-center mb-4">
-                                <X className="w-10 h-10 text-rose-500" />
-                            </div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-2">{error}</h3>
-                            <button
-                                onClick={() => window.location.reload()}
-                                className="px-6 py-2 bg-[#0d9488] text-white rounded-full font-bold hover:bg-[#0a7a70] transition-all"
-                            >
-                                Retry
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="h-full">
-                            <TimelineView
-                                data={fullHistory}
-                                height="100%"
-                                showTitle={false}
-                            />
-                        </div>
-                    )}
+                    {renderMainContent()}
                 </div>
 
                 {/* Footer Info */}

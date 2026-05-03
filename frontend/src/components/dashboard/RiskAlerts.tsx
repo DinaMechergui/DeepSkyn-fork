@@ -284,6 +284,31 @@ export const RiskAlerts: React.FC<RiskAlertsProps> = ({ onRefresh, className }) 
     ]);
   };
 
+  const renderRisks = () => {
+    if (loading && !risks.length) {
+      return (
+        <div className="p-4 text-center text-gray-500">
+          <div className="animate-pulse">Loading risk analysis...</div>
+        </div>
+      );
+    }
+    if (risks.length === 0) {
+      return (
+        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-green-700 text-sm font-medium">✓ No significant skin risks detected</p>
+        </div>
+      );
+    }
+    return risks.map((risk) => (
+      <RiskItem
+        key={risk.type}
+        risk={risk}
+        isExpanded={expandedRisk === risk.type}
+        onToggle={() => setExpandedRisk(expandedRisk === risk.type ? null : risk.type)}
+      />
+    ));
+  };
+
   return (
     <div className={`${className || ''}`}>
       <div className="space-y-4">
@@ -313,24 +338,7 @@ export const RiskAlerts: React.FC<RiskAlertsProps> = ({ onRefresh, className }) 
 
         {/* Individual Risks */}
         <div className="space-y-3">
-          {loading && !risks.length ? (
-            <div className="p-4 text-center text-gray-500">
-              <div className="animate-pulse">Loading risk analysis...</div>
-            </div>
-          ) : risks.length === 0 ? (
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-green-700 text-sm font-medium">✓ No significant skin risks detected</p>
-            </div>
-          ) : (
-            risks.map((risk) => (
-              <RiskItem
-                key={risk.type}
-                risk={risk}
-                isExpanded={expandedRisk === risk.type}
-                onToggle={() => setExpandedRisk(expandedRisk === risk.type ? null : risk.type)}
-              />
-            ))
-          )}
+          {renderRisks()}
         </div>
 
         {/* Immediate Actions */}

@@ -65,13 +65,14 @@ function TrendBadge({ trend }: { trend: 'improvement' | 'regression' | 'stable' 
 }
 
 function ScoreBadge({ score }: { score: number }) {
-  let badgeClass = 'score-badge ';
-  if (score >= 70) badgeClass += 'score-high';
-  else if (score >= 50) badgeClass += 'score-medium';
-  else badgeClass += 'score-low';
+  const getBadgeClass = (s: number) => {
+    if (s >= 70) return 'score-badge score-high';
+    if (s >= 50) return 'score-badge score-medium';
+    return 'score-badge score-low';
+  };
 
   return (
-    <span className={badgeClass}>
+    <span className={getBadgeClass(score)}>
       Score {score}
     </span>
   );
@@ -241,6 +242,34 @@ export default function ComparisonPage() {
   /**
    * Génère un paragraphe explicatif dynamique en français basé sur les résultats.
    */
+  const getHydrationText = (hydration: any): string | null => {
+    if (!hydration) return null;
+    const deltaStr = Math.abs(hydration.delta).toFixed(1);
+    if (hydration.trend === 'improvement') {
+      return `Votre hydratation a augmenté de ${deltaStr} points, ce qui est excellent pour la barrière cutanée !`;
+    }
+    if (hydration.trend === 'regression') {
+      return `Votre hydratation a baissé de ${deltaStr} points, ce qui peut fragiliser votre peau.`;
+    }
+    return null;
+  };
+
+  const getAcneWrinklesText = (acne: any, wrinkles: any): string[] => {
+    const texts: string[] = [];
+    if (acne?.trend === 'improvement') texts.push('Votre acné montre des signes de diminution, bravo !');
+    else if (acne?.trend === 'regression') texts.push("On observe une petite poussée d'acné, restez régulier sur le nettoyage.");
+
+    if (wrinkles?.trend === 'regression') texts.push('En revanche, vos rides ont légèrement augmenté.');
+    else if (wrinkles?.trend === 'improvement') texts.push('Vos rides se sont estompées, continuez vos soins anti-âge.');
+    return texts;
+  };
+
+  const getGlobalAdvice = (trend: string): string => {
+    if (trend === 'improvement') return 'Votre peau est sur la bonne voie, restez constant dans vos efforts !';
+    if (trend === 'regression') return 'Votre peau a besoin de plus de soin en ce moment, pensez à ajuster votre routine.';
+    return 'Votre peau est stable, continuez ainsi pour maintenir ces résultats.';
+  };
+
   const getExplanatoryText = () => {
     if (!result || !result.differences) return null;
 
@@ -249,56 +278,13 @@ export default function ComparisonPage() {
     const acne = differences.find((d) => d.metric === 'acne');
     const wrinkles = differences.find((d) => d.metric === 'wrinkles');
 
-    const sections: string[] = [];
+    const sections: (string | null)[] = [
+      getHydrationText(hydration),
+      ...getAcneWrinklesText(acne, wrinkles),
+      getGlobalAdvice(globalTrend)
+    ];
 
-    // Hydratation
-    if (hydration) {
-      if (hydration.trend === 'improvement') {
-        sections.push(
-          `Votre hydratation a augmenté de ${Math.abs(hydration.delta).toFixed(
-            1
-          )} points, ce qui est excellent pour la barrière cutanée !`
-        );
-      } else if (hydration.trend === 'regression') {
-        sections.push(
-          `Votre hydratation a baissé de ${Math.abs(hydration.delta).toFixed(
-            1
-          )} points, ce qui peut fragiliser votre peau.`
-        );
-      }
-    }
-
-    // Acné / Rides
-    if (acne && acne.trend === 'improvement') {
-      sections.push('Votre acné montre des signes de diminution, bravo !');
-    } else if (acne && acne.trend === 'regression') {
-      sections.push(
-        "On observe une petite poussée d'acné, restez régulier sur le nettoyage."
-      );
-    }
-
-    if (wrinkles && wrinkles.trend === 'regression') {
-      sections.push('En revanche, vos rides ont légèrement augmenté.');
-    } else if (wrinkles && wrinkles.trend === 'improvement') {
-      sections.push('Vos rides se sont estompées, continuez vos soins anti-âge.');
-    }
-
-    // Conseil final selon la tendance globale
-    if (globalTrend === 'improvement') {
-      sections.push(
-        'Votre peau est sur la bonne voie, restez constant dans vos efforts !'
-      );
-    } else if (globalTrend === 'regression') {
-      sections.push(
-        'Votre peau a besoin de plus de soin en ce moment, pensez à ajuster votre routine.'
-      );
-    } else {
-      sections.push(
-        'Votre peau est stable, continuez ainsi pour maintenir ces résultats.'
-      );
-    }
-
-    return sections.join(' ');
+    return sections.filter(Boolean).join(' ');
   };
 
   return (

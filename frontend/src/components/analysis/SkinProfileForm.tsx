@@ -101,6 +101,51 @@ const SENSITIVITY_LEVEL_LABELS: Record<string, string> = { low: 'Stable', medium
 const REDNESS_INTENSITY_LABELS: Record<string, string> = { occasional: 'Légère', persistent: 'Diffuse', flaring: 'Intense' };
 const REDNESS_ZONE_LABELS: Record<string, string> = { cheeks: 'Joues', nose: 'Nez', chin: 'Menton' };
 
+const getAcneCircleClass = (level: string) => {
+    switch (level) {
+        case 'mild': return 'h-2 w-2 bg-rose-300';
+        case 'moderate': return 'h-4 w-4 bg-rose-400';
+        case 'severe': return 'h-6 w-6 bg-rose-600';
+        default: return 'h-4 w-4 bg-rose-400';
+    }
+};
+
+const getHydrationBgClass = (feel: string) => {
+    switch (feel) {
+        case 'normal': return 'bg-sky-400';
+        case 'tight': return 'bg-sky-200';
+        case 'very-dry': return 'bg-slate-300';
+        default: return 'bg-sky-400';
+    }
+};
+
+const getPoreZoneLabel = (zone: string) => {
+    switch (zone) {
+        case 'tzone': return 'Zone T';
+        case 'cheeks': return 'Joues';
+        case 'all': return 'Global';
+        default: return 'Global';
+    }
+};
+
+const getSensitivityPulseClass = (level: string) => {
+    switch (level) {
+        case 'low': return 'bg-orange-300';
+        case 'medium': return 'bg-orange-500';
+        case 'high': return 'bg-red-600 animate-pulse';
+        default: return 'bg-orange-500';
+    }
+};
+
+const getSensitivityLabel = (level: string) => {
+    switch (level) {
+        case 'low': return 'Stable';
+        case 'medium': return 'Réactive';
+        case 'high': return 'Critique';
+        default: return 'Réactive';
+    }
+};
+
 /** Detail Components to reduce complexity */
 
 const AcneDetails = ({ data, setSingle, toggleMultiSelect }: { data: any, setSingle: any, toggleMultiSelect: any }) => (
@@ -124,11 +169,7 @@ const AcneDetails = ({ data, setSingle, toggleMultiSelect }: { data: any, setSin
                     >
                         <div className={`h-8 w-8 rounded-full border-2 flex items-center justify-center ${data.severity === level ? 'border-rose-200 bg-rose-50' : 'border-slate-100 bg-slate-50'
                             }`}>
-                            <div className={`rounded-full ${
-                                level === 'mild' ? 'h-2 w-2 bg-rose-300' :
-                                level === 'moderate' ? 'h-4 w-4 bg-rose-400' :
-                                'h-6 w-6 bg-rose-600'
-                            }`} />
+                            <div className={`rounded-full ${getAcneCircleClass(level)}`} />
                         </div>
                         <span className={`text-[10px] font-bold ${data.severity === level ? 'text-rose-700' : ''}`}>
                             {ACNE_LEVEL_LABELS[level]}
@@ -265,10 +306,7 @@ const HydrationDetails = ({ data, setSingle }: { data: any, setSingle: any }) =>
                     >
                         <div className={`h-8 w-8 rounded-full border-2 flex items-center justify-center ${data.feel === feel ? 'border-sky-200 bg-sky-50' : 'border-slate-100 bg-slate-50'
                             }`}>
-                            <div className={`w-full h-full rounded-full opacity-30 ${feel === 'normal' ? 'bg-sky-400' :
-                                feel === 'tight' ? 'bg-sky-200' :
-                                    'bg-slate-300'
-                                }`} style={{
+                            <div className={`w-full h-full rounded-full opacity-30 ${getHydrationBgClass(feel)}`} style={{
                                     backgroundImage: feel === 'very-dry' ? 'radial-gradient(#94a3b8 1px, transparent 1px)' : 'none',
                                     backgroundSize: '4px 4px'
                                 }} />
@@ -396,7 +434,7 @@ const PoresDetails = ({ data, setSingle }: { data: any, setSingle: any }) => (
                             : 'bg-white border-slate-100 text-slate-500'
                             }`}
                     >
-                        {zone === 'tzone' ? 'Zone T' : zone === 'cheeks' ? 'Joues' : 'Global'}
+                        {getPoreZoneLabel(zone)}
                     </button>
                 ))}
             </div>
@@ -425,13 +463,10 @@ const SensitivityDetails = ({ data, setSingle }: { data: any, setSingle: any }) 
                     >
                         <div className={`h-8 w-8 rounded-full border-2 flex items-center justify-center ${data.level === level ? 'border-red-200 bg-red-50' : 'border-slate-100 bg-slate-50'
                             }`}>
-                            <div className={`h-4 w-4 rounded-full transition-all ${level === 'low' ? 'bg-orange-300' :
-                                level === 'medium' ? 'bg-orange-500' :
-                                    'bg-red-600 animate-pulse'
-                                }`} />
+                            <div className={`h-4 w-4 rounded-full transition-all ${getSensitivityPulseClass(level)}`} />
                         </div>
                         <span className={`text-[10px] font-bold ${data.level === level ? 'text-red-700' : ''}`}>
-                            {level === 'low' ? 'Stable' : level === 'medium' ? 'Réactive' : 'Critique'}
+                            {getSensitivityLabel(level)}
                         </span>
                     </button>
                 ))}
@@ -502,58 +537,54 @@ export const SkinProfileForm: React.FC<SkinProfileFormProps> = ({ profile, setPr
     const derivedInputs = useMemo(() => {
         const concerns: string[] = [];
 
-        const getBoost = (key: keyof SkinQuestionnaireData) => {
-            if (key === 'acne') {
-                const item = questionnaire.acne;
-                if (!item.enabled) return { base: undefined, boost: 0 };
-                const base = getAcneBase(item.severity || '');
-                const boost = (item.type === 'cystic' ? 10 : item.type === 'hormonal' ? 6 : 0) + (item.location?.length || 0) * 3;
-                return { base, boost };
-            }
-            if (key === 'blackheads') {
-                const item = questionnaire.blackheads;
-                if (!item.enabled) return { base: undefined, boost: 0 };
-                const base = getBlackheadsBase(item.severity || '');
-                const boost = (item.location?.length || 0) * 2;
-                return { base, boost };
-            }
-            if (key === 'wrinkles') {
-                const item = questionnaire.wrinkles;
-                if (!item.enabled) return { base: undefined, boost: 0 };
-                const base = getWrinklesBase(item.depth || '');
-                const boost = (item.location?.length || 0) * 4;
-                return { base, boost };
-            }
-            if (key === 'pores') {
-                const item = questionnaire.pores;
-                if (!item.enabled) return { base: undefined, boost: 0 };
-                const base = getPoresBase(item.visibility || '');
-                const boost = item.zone === 'all' ? 10 : item.zone === 'tzone' ? 6 : 0;
-                return { base, boost };
-            }
-            if (key === 'redness') {
-                const item = questionnaire.redness;
-                if (!item.enabled) return { base: undefined, boost: 0 };
-                const base = getRednessBase(item.level || '');
-                const boost = (item.location?.length || 0) * 2;
-                return { base, boost };
-            }
-            return { base: undefined, boost: 0 };
+        const calculateAcneBoost = (item: any) => {
+            if (!item.enabled) return { base: undefined, boost: 0 };
+            const base = getAcneBase(item.severity || '');
+            const boost = (item.type === 'cystic' ? 10 : item.type === 'hormonal' ? 6 : 0) + (item.location?.length || 0) * 3;
+            return { base, boost };
         };
 
-        const acneRes = getBoost('acne');
+        const calculateBlackheadsBoost = (item: any) => {
+            if (!item.enabled) return { base: undefined, boost: 0 };
+            const base = getBlackheadsBase(item.severity || '');
+            const boost = (item.location?.length || 0) * 2;
+            return { base, boost };
+        };
+
+        const calculateWrinklesBoost = (item: any) => {
+            if (!item.enabled) return { base: undefined, boost: 0 };
+            const base = getWrinklesBase(item.depth || '');
+            const boost = (item.location?.length || 0) * 4;
+            return { base, boost };
+        };
+
+        const calculatePoresBoost = (item: any) => {
+            if (!item.enabled) return { base: undefined, boost: 0 };
+            const base = getPoresBase(item.visibility || '');
+            const boost = item.zone === 'all' ? 10 : item.zone === 'tzone' ? 6 : 0;
+            return { base, boost };
+        };
+
+        const calculateRednessBoost = (item: any) => {
+            if (!item.enabled) return { base: undefined, boost: 0 };
+            const base = getRednessBase(item.level || '');
+            const boost = (item.location?.length || 0) * 2;
+            return { base, boost };
+        };
+
+        const acneRes = calculateAcneBoost(questionnaire.acne);
         if (questionnaire.acne.enabled) concerns.push('Acné');
         
-        const blackheadsRes = getBoost('blackheads');
+        const blackheadsRes = calculateBlackheadsBoost(questionnaire.blackheads);
         if (questionnaire.blackheads.enabled) concerns.push('Points noirs');
         
-        const wrinklesRes = getBoost('wrinkles');
+        const wrinklesRes = calculateWrinklesBoost(questionnaire.wrinkles);
         if (questionnaire.wrinkles.enabled) concerns.push('Rides');
         
-        const poresRes = getBoost('pores');
+        const poresRes = calculatePoresBoost(questionnaire.pores);
         if (questionnaire.pores.enabled) concerns.push('Pores dilatés');
 
-        const rednessRes = getBoost('redness');
+        const rednessRes = calculateRednessBoost(questionnaire.redness);
         if (questionnaire.redness.enabled) concerns.push('Rougeurs');
 
         if (questionnaire.hydration.enabled) concerns.push('Déshydratation');

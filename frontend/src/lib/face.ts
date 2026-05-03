@@ -39,5 +39,5 @@ export async function getFaceDescriptor(video: HTMLVideoElement) {
   }
 
   console.log("✅ Face detected")
-  return Array.from(detection.descriptor) as number[]
+  return Array.from(detection.descriptor)
 }

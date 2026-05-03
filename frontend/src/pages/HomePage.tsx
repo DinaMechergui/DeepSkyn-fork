@@ -176,7 +176,7 @@ function Testimonial({ quote, author }: { quote: string, author: string }) {
   return (
     <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100 text-left">
       <div className="flex text-yellow-400 mb-4">
-        {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-current" />)}
+        {[1, 2, 3, 4, 5].map((num) => <Star key={`star-${num}`} className="w-4 h-4 fill-current" />)}
       </div>
       <p className="text-slate-700 italic mb-6">"{quote}"</p>
       <p className="font-bold text-slate-900">— {author}</p>

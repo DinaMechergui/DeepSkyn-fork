@@ -1,26 +1,24 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-    Sparkles, ArrowLeft, Zap, AlertCircle, GitCompare,
+    Sparkles, Zap, AlertCircle, GitCompare,
     CheckCircle, RefreshCw, Activity,
     BarChart2, Info, Waves, Flame, Microscope,
     Bandage, CircleDot, HeartPulse,
     CircleCheck, AlertTriangle, BarChart3,
     Upload, X, Download, Volume2, VolumeX,
-    Send, Loader2, Bot, ArrowUpCircle, Lock, Calendar, FlaskConical,
+    Loader2, ArrowUpCircle, Lock, Calendar, FlaskConical,
     Sun, Moon, UserCircle
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { aiAnalysisService } from '../services/aiAnalysisService';
-import { chatService } from '../services/chat.service';
 import { getUser } from '../lib/authSession';
 import { apiGet } from '../services/apiClient';
 import type { SubscriptionData } from '../services/paymentService';
 
 import type { GlobalScoreResult, ConditionScore, UserSkinProfile } from '../types/aiAnalysis';
 import { SkinProfileForm } from '../components/analysis/SkinProfileForm';
-import { SvrRoutinePanel } from '../components/analysis/SvrRoutinePanel';
 import { DEFAULT_QUESTIONNAIRE, type SkinQuestionnaireData } from '../types/skinQuestionnaire';
 import { comparisonService } from '../services/comparison.service';
 import TimelineView from '../components/insights/TimelineView';
@@ -382,29 +380,48 @@ function ConditionDetailDrawer({ condition, result, profile, onClose }: Conditio
         ? Math.round((condition.severity as number) * 100) : null;
     const detectionCount = condition.count ?? 0;
 
-    const tier = !isEvaluated
-        ? 'unknown'
-        : scoreValue >= 75 ? 'excellent'
-            : scoreValue >= 50 ? 'moderate'
-                : 'critical';
+    const getTier = (evaluated: boolean, score: number) => {
+        if (!evaluated) return 'unknown';
+        if (score >= 75) return 'excellent';
+        if (score >= 50) return 'moderate';
+        return 'critical';
+    };
 
-    const severityLabel = tier === 'unknown' ? t('analysis.non_evaluated')
-        : tier === 'excellent' ? t('analysis.optimal')
-            : tier === 'moderate' ? t('analysis.moderate')
-                : t('analysis.critical');
-    const severityColor = tier === 'unknown' ? '#94a3b8'
-        : tier === 'excellent' ? '#10b981'
-            : tier === 'moderate' ? '#f59e0b'
-                : '#ef4444';
+    const tier = getTier(isEvaluated, scoreValue);
+
+    const getSeverityLabel = (tierName: string) => {
+        switch (tierName) {
+            case 'excellent': return t('analysis.optimal');
+            case 'moderate': return t('analysis.moderate');
+            case 'critical': return t('analysis.critical');
+            default: return t('analysis.non_evaluated');
+        }
+    };
+
+    const getSeverityColor = (tierName: string) => {
+        switch (tierName) {
+            case 'excellent': return '#10b981';
+            case 'moderate': return '#f59e0b';
+            case 'critical': return '#ef4444';
+            default: return '#94a3b8';
+        }
+    };
+
+    const severityLabel = getSeverityLabel(tier);
+    const severityColor = getSeverityColor(tier);
 
     const getDynamicDescription = () => {
         if (result.totalDetections === 0) return t('analysis.no_detection_summary', { condition: meta.label.toLowerCase() });
         if (tier === 'excellent') return `${baseDetails.detailedDescription} ${t('analysis.desc_excellent')}`;
         if (tier === 'moderate') return `${baseDetails.detailedDescription} ${t('analysis.desc_moderate', { score: scoreValue })}`;
         
-        const detectionsStr = detectionCount > 0 
-            ? (detectionCount > 1 ? t('analysis.detections_plural', { count: detectionCount }) : t('analysis.detections_singular', { count: detectionCount }))
-            : t('analysis.several_signals');
+        const getDetectionsStr = () => {
+            if (detectionCount <= 0) return t('analysis.several_signals');
+            return detectionCount > 1 
+                ? t('analysis.detections_plural', { count: detectionCount }) 
+                : t('analysis.detections_singular', { count: detectionCount });
+        };
+        const detectionsStr = getDetectionsStr();
         return `${baseDetails.detailedDescription} ${t('analysis.desc_critical', { score: scoreValue, detections: detectionsStr })}`;
     };
     const dynamicDescription = getDynamicDescription();
@@ -413,11 +430,18 @@ function ConditionDetailDrawer({ condition, result, profile, onClose }: Conditio
         ? baseDetails.causes.slice(0, 2)
         : baseDetails.causes;
 
-    const dynamicRecos = tier === 'excellent'
-        ? [t('analysis.reco_excellent', { condition: meta.label.toLowerCase() }), ...baseDetails.careRecommendations.slice(0, 1)]
-        : tier === 'moderate'
-            ? baseDetails.careRecommendations
-            : [t('analysis.reco_critical', { condition: meta.label.toLowerCase() }), ...baseDetails.careRecommendations];
+    const getDynamicRecos = () => {
+        const label = meta.label.toLowerCase();
+        if (tier === 'excellent') {
+            return [t('analysis.reco_excellent', { condition: label }), ...baseDetails.careRecommendations.slice(0, 1)];
+        }
+        if (tier === 'moderate') {
+            return baseDetails.careRecommendations;
+        }
+        return [t('analysis.reco_critical', { condition: label }), ...baseDetails.careRecommendations];
+    };
+
+    const dynamicRecos = getDynamicRecos();
 
     // Context badges
     const isBest = result?.analysis?.bestCondition === condition.type;
@@ -651,7 +675,6 @@ export default function SkinAnalysisPage() {
     });
     const [isSpeaking, setIsSpeaking] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const chatEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (!selectedCondition) return;
@@ -747,10 +770,7 @@ export default function SkinAnalysisPage() {
     }, [result, routineResult, routineError, currentPlan, profile]);
 
 
-    // Chat states
-    const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant', content: string }[]>([]);
-    const [chatInput, setChatInput] = useState('');
-    const [chatLoading, setChatLoading] = useState(false);
+
 
 
     const exportToCSV = useCallback(() => {
@@ -850,35 +870,6 @@ export default function SkinAnalysisPage() {
         });
     };
 
-    useEffect(() => {
-        // Auto-scroll chat
-        if (chatEndRef.current) {
-            chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
-        }
-    }, [chatMessages]);
-
-    const sendChatMessage = async (e: React.SyntheticEvent) => {
-        e.preventDefault();
-        if (!chatInput.trim() || chatLoading) return;
-
-        const userMessage = chatInput.trim();
-        setChatInput('');
-        setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-        setChatLoading(true);
-
-        try {
-            const response = await chatService.sendPersonalizedMessage(userMessage);
-            setChatMessages(prev => [...prev, { role: 'assistant', content: response }]);
-        } catch (err: any) {
-            console.error('Chat error:', err);
-            const msg = err.message?.includes('LIMIT_REACHED')
-                ? t('chat.limit_message')
-                : t('chat.error_fallback', { defaultValue: "Désolé, j'ai rencontré une erreur. Réessaye plus tard." });
-            setChatMessages(prev => [...prev, { role: 'assistant', content: msg }]);
-        } finally {
-            setChatLoading(false);
-        }
-    };
 
 
 
@@ -960,7 +951,6 @@ export default function SkinAnalysisPage() {
         setLoading(false);
         setScanPhase('idle');
         setError(null);
-        setChatMessages([]);
         sessionStorage.removeItem('skinAnalysisResult');
         localStorage.removeItem('skinAnalysisResult');
     }, []);

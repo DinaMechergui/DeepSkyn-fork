@@ -111,6 +111,29 @@ export const SkinAgeInsightCard: React.FC<SkinAgeInsightCardProps> = ({
     return 'Skin appears older than chronological age';
   };
 
+  const getScoreColor = (percent: number, palette: any): [number, number, number] => {
+    if (percent >= 75) return palette.emerald;
+    if (percent >= 55) return palette.amber;
+    return palette.rose;
+  };
+
+  const getPriorityLabel = (idx: number): string => {
+    if (idx < 2) return 'High';
+    if (idx < 5) return 'Medium';
+    return 'Low';
+  };
+
+  const getTimelineLabel = (idx: number): string => {
+    if (idx < 2) return 'Next 7 days';
+    return 'Next 30 days';
+  };
+
+  const getCategoryLabel = (idx: number): string => {
+    if (idx === 0) return 'Core';
+    if (idx < 3) return 'Priority';
+    return 'Support';
+  };
+
   const getUserContext = (): { name: string; email: string } => {
     try {
       const raw = localStorage.getItem('user');
@@ -347,7 +370,7 @@ export const SkinAgeInsightCard: React.FC<SkinAgeInsightCardProps> = ({
 
     // KPI cards row
     const scorePercent = Math.max(0, Math.min(100, scoreValue ?? 0));
-    const scoreColor: [number, number, number] = scorePercent >= 75 ? palette.emerald : scorePercent >= 55 ? palette.amber : palette.rose;
+    const scoreColor = getScoreColor(scorePercent, palette);
     metricCard(14, 'Skin Age Score', fmt(scoreValue, '/100'), scoreColor);
     metricCard(60, 'User Age', fmt(realAge, ' yrs'), palette.teal500);
     metricCard(106, 'Skin Age', fmt(skinAge, ' yrs'), palette.teal600);
@@ -628,8 +651,8 @@ export const SkinAgeInsightCard: React.FC<SkinAgeInsightCardProps> = ({
 
     const recommendationData = buildRecommendedActions().map((tip, idx) => ({
         order: idx + 1,
-        priority: idx < 2 ? 'High' : idx < 5 ? 'Medium' : 'Low',
-        timeline: idx < 2 ? 'Next 7 days' : 'Next 30 days',
+        priority: getPriorityLabel(idx),
+        timeline: getTimelineLabel(idx),
         recommendation: tip,
       }));
     if (recommendationData.length === 0) {
@@ -639,7 +662,7 @@ export const SkinAgeInsightCard: React.FC<SkinAgeInsightCardProps> = ({
 
     const productFocusData = (insight?.productSuggestions?.length ? insight.productSuggestions : ['Hydration support', 'Photoprotection (SPF)', 'Barrier reinforcement']).map((item, idx) => ({
         order: idx + 1,
-        category: idx === 0 ? 'Core' : idx < 3 ? 'Priority' : 'Support',
+        category: getCategoryLabel(idx),
         focus: item,
       }));
     addSheet('Product Focus', productFocusData, [8, 14, 60]);

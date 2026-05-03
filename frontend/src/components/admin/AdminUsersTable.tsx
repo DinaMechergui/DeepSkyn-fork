@@ -86,6 +86,221 @@ export function AdminUsersTable({
     })
   }
 
+  const renderTableContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex justify-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600"></div>
+        </div>
+      )
+    }
+
+    if (users.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12">
+          <AlertCircle className="mb-2 h-8 w-8 text-slate-400" />
+          <p className="text-sm text-slate-500">Aucun utilisateur trouvé</p>
+        </div>
+      )
+    }
+
+    return (
+      <>
+        {/* Version desktop: tableau */}
+        <div className="hidden md:block">
+          <table className="w-full">
+            <thead className="border-b border-slate-200 bg-slate-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">
+                  Nom
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">
+                  Email
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">
+                  Rôle
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">
+                  Plan
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">
+                  Date création
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">
+                  Dernier login
+                </th>
+                <th className="px-6 py-3 text-right text-sm font-semibold text-slate-900">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {users.map((user) => (
+                <tr
+                  key={user.id}
+                  className="transition-colors hover:bg-slate-50"
+                >
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 flex items-center justify-center text-white font-semibold">
+                        {(user.firstName?.[0] || user.email?.[0] || '?').toUpperCase()}
+                        {(user.lastName?.[0] || '').toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900">
+                          {user.firstName || ''} {user.lastName || ''}
+                          {(!user.firstName && !user.lastName) && user.email}
+                        </p>
+                        {user.authMethod && (
+                          <p className="text-xs text-slate-500">{user.authMethod}</p>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{user.email}</td>
+                  <td className="px-6 py-4">
+                    <span
+                      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getRoleColor(user.role)}`}
+                    >
+                      {user.role}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <PlanBadge user={user} />
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {formatDate(user.createdAt)}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {formatDate(user.lastLogin)}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => onView(user)}
+                        className="p-2 text-slate-400 hover:text-slate-600 rounded hover:bg-slate-100 transition"
+                        title="Voir"
+                      >
+                        <Eye size={18} />
+                      </button>
+                      <button
+                        onClick={() => onEdit(user)}
+                        className="p-2 text-slate-400 hover:text-blue-600 rounded hover:bg-blue-50 transition"
+                        title="Modifier"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      <button
+                        onClick={() => onDelete(user)}
+                        className="p-2 text-slate-400 hover:text-red-600 rounded hover:bg-red-50 transition"
+                        title="Supprimer"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Version mobile: cards */}
+        <div className="md:hidden divide-y divide-slate-200">
+          {users.map((user) => (
+            <div key={user.id} className="p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 flex items-center justify-center text-white font-semibold text-sm">
+                    {(user.firstName?.[0] || user.email?.[0] || '?').toUpperCase()}
+                    {(user.lastName?.[0] || '').toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-slate-900 truncate">
+                      {user.firstName || ''} {user.lastName || ''}
+                      {(!user.firstName && !user.lastName) && user.email}
+                    </p>
+                    <p className="text-xs text-slate-500 truncate">{user.email}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() =>
+                    setExpandedRowId(expandedRowId === user.id ? null : user.id)
+                  }
+                  className="p-2 hover:bg-slate-100 rounded transition"
+                >
+                  <MoreVertical size={18} className="text-slate-400" />
+                </button>
+              </div>
+
+              {/* Info supplémentaire */}
+              <div className="mt-3 ml-13 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Plan:</span>
+                  <PlanBadge user={user} />
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Rôle:</span>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getRoleColor(user.role)}`}
+                  >
+                    {user.role}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Créé:</span>
+                  <span className="text-slate-900">{formatDate(user.createdAt)}</span>
+                </div>
+                {user.lastLogin && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Dernier login:</span>
+                    <span className="text-slate-900">{formatDate(user.lastLogin)}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions mobile */}
+              {expandedRowId === user.id && (
+                <div className="mt-3 flex gap-2 pt-3 border-t border-slate-200">
+                  <button
+                    onClick={() => {
+                      onView(user)
+                      setExpandedRowId(null)
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
+                  >
+                    <Eye size={16} />
+                    Voir
+                  </button>
+                  <button
+                    onClick={() => {
+                      onEdit(user)
+                      setExpandedRowId(null)
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded bg-amber-50 text-amber-600 hover:bg-amber-100 transition"
+                  >
+                    <Edit2 size={16} />
+                    Modifier
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDelete(user)
+                      setExpandedRowId(null)
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded bg-red-50 text-red-600 hover:bg-red-100 transition"
+                  >
+                    <Trash2 size={16} />
+                    Supprimer
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </>
+    )
+  }
+
   return (
     <div className="space-y-4">
       {/* Barre de recherche et filtres */}
@@ -127,210 +342,7 @@ export function AdminUsersTable({
 
       {/* Tableau mobile-friendly */}
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600"></div>
-          </div>
-        ) : users.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <AlertCircle className="mb-2 h-8 w-8 text-slate-400" />
-            <p className="text-sm text-slate-500">Aucun utilisateur trouvé</p>
-          </div>
-        ) : (
-          <>
-            {/* Version desktop: tableau */}
-            <div className="hidden md:block">
-              <table className="w-full">
-                <thead className="border-b border-slate-200 bg-slate-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">
-                      Nom
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">
-                      Rôle
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">
-                      Plan
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">
-                      Date création
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">
-                      Dernier login
-                    </th>
-                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-900">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {users.map((user) => (
-                    <tr
-                      key={user.id}
-                      className="transition-colors hover:bg-slate-50"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 flex items-center justify-center text-white font-semibold">
-                            {(user.firstName?.[0] || user.email?.[0] || '?').toUpperCase()}
-                            {(user.lastName?.[0] || '').toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-medium text-slate-900">
-                              {user.firstName || ''} {user.lastName || ''}
-                              {(!user.firstName && !user.lastName) && user.email}
-                            </p>
-                            {user.authMethod && (
-                              <p className="text-xs text-slate-500">{user.authMethod}</p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{user.email}</td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getRoleColor(user.role)}`}
-                        >
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <PlanBadge user={user} />
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {formatDate(user.createdAt)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {formatDate(user.lastLogin)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => onView(user)}
-                            className="p-2 text-slate-400 hover:text-slate-600 rounded hover:bg-slate-100 transition"
-                            title="Voir"
-                          >
-                            <Eye size={18} />
-                          </button>
-                          <button
-                            onClick={() => onEdit(user)}
-                            className="p-2 text-slate-400 hover:text-blue-600 rounded hover:bg-blue-50 transition"
-                            title="Modifier"
-                          >
-                            <Edit2 size={18} />
-                          </button>
-                          <button
-                            onClick={() => onDelete(user)}
-                            className="p-2 text-slate-400 hover:text-red-600 rounded hover:bg-red-50 transition"
-                            title="Supprimer"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Version mobile: cards */}
-            <div className="md:hidden divide-y divide-slate-200">
-              {users.map((user) => (
-                <div key={user.id} className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 flex items-center justify-center text-white font-semibold text-sm">
-                        {(user.firstName?.[0] || user.email?.[0] || '?').toUpperCase()}
-                        {(user.lastName?.[0] || '').toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-900 truncate">
-                          {user.firstName || ''} {user.lastName || ''}
-                          {(!user.firstName && !user.lastName) && user.email}
-                        </p>
-                        <p className="text-xs text-slate-500 truncate">{user.email}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() =>
-                        setExpandedRowId(expandedRowId === user.id ? null : user.id)
-                      }
-                      className="p-2 hover:bg-slate-100 rounded transition"
-                    >
-                      <MoreVertical size={18} className="text-slate-400" />
-                    </button>
-                  </div>
-
-                  {/* Info supplémentaire */}
-                  <div className="mt-3 ml-13 space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Plan:</span>
-                      <PlanBadge user={user} />
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Rôle:</span>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getRoleColor(user.role)}`}
-                      >
-                        {user.role}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Créé:</span>
-                      <span className="text-slate-900">{formatDate(user.createdAt)}</span>
-                    </div>
-                    {user.lastLogin && (
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Dernier login:</span>
-                        <span className="text-slate-900">{formatDate(user.lastLogin)}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Actions mobile */}
-                  {expandedRowId === user.id && (
-                    <div className="mt-3 flex gap-2 pt-3 border-t border-slate-200">
-                      <button
-                        onClick={() => {
-                          onView(user)
-                          setExpandedRowId(null)
-                        }}
-                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
-                      >
-                        <Eye size={16} />
-                        Voir
-                      </button>
-                      <button
-                        onClick={() => {
-                          onEdit(user)
-                          setExpandedRowId(null)
-                        }}
-                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded bg-amber-50 text-amber-600 hover:bg-amber-100 transition"
-                      >
-                        <Edit2 size={16} />
-                        Modifier
-                      </button>
-                      <button
-                        onClick={() => {
-                          onDelete(user)
-                          setExpandedRowId(null)
-                        }}
-                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded bg-red-50 text-red-600 hover:bg-red-100 transition"
-                      >
-                        <Trash2 size={16} />
-                        Supprimer
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+        {renderTableContent()}
       </div>
 
       {/* Pagination */}

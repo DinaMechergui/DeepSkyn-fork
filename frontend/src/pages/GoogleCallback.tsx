@@ -12,6 +12,31 @@ const GoogleCallback = () => {
   const [message, setMessage] = useState('Processing authentication...');
   const processingRef = useRef(false);
 
+  const getStatusConfig = () => {
+    switch (status) {
+      case 'success':
+        return {
+          bg: 'bg-green-100',
+          icon: <CheckCircle2 className="h-8 w-8 text-green-600" strokeWidth={2} aria-hidden />,
+          title: 'Success!'
+        };
+      case 'error':
+        return {
+          bg: 'bg-red-100',
+          icon: <XCircle className="h-8 w-8 text-red-600" strokeWidth={2} aria-hidden />,
+          title: 'Authentication Failed'
+        };
+      default:
+        return {
+          bg: 'bg-blue-100',
+          icon: <Loader2 className="h-8 w-8 animate-spin text-blue-600" aria-hidden />,
+          title: 'Authenticating with Google...'
+        };
+    }
+  };
+
+  const config = getStatusConfig();
+
   useEffect(() => {
     const handleCallback = async () => {
       if (processingRef.current) return;
@@ -178,26 +203,13 @@ const GoogleCallback = () => {
     <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
       <div className="text-center">
         <div className="mb-8">
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${status === 'loading' ? 'bg-blue-100' :
-            status === 'success' ? 'bg-green-100' :
-              'bg-red-100'
-            }`}>
-            {status === 'loading' && (
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" aria-hidden />
-            )}
-            {status === 'success' && (
-              <CheckCircle2 className="h-8 w-8 text-green-600" strokeWidth={2} aria-hidden />
-            )}
-            {status === 'error' && (
-              <XCircle className="h-8 w-8 text-red-600" strokeWidth={2} aria-hidden />
-            )}
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${config.bg}`}>
+            {config.icon}
           </div>
         </div>
 
         <h1 className="text-2xl font-bold text-slate-900 mb-2">
-          {status === 'loading' ? 'Authenticating with Google...' :
-            status === 'success' ? 'Success!' :
-              'Authentication Failed'}
+          {config.title}
         </h1>
 
         <p className="text-slate-600 max-w-sm mx-auto">

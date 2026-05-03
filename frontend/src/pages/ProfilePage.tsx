@@ -65,163 +65,134 @@ export default function ProfilePage() {
     if (!accessToken) navigate("/auth/login", { replace: true })
   }, [accessToken, navigate])
 
-  // Charger profil
-  useEffect(() => {
-    const run = async () => {
-      setLoadingMe(true)
-      setError("")
-      setSuccess("")
+  const loadProfileData = () => {
+    setLoadingMe(true);
+    setError("");
+    setSuccess("");
 
-      try {
-        // Pour Google login, utiliser les données localStorage directement
-        const userStr = localStorage.getItem('user');
-        if (userStr) {
-          const userData = JSON.parse(userStr);
-          setMe(userData);
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const userData = JSON.parse(userStr);
+        setMe(userData);
 
-          // Charger les données existantes
-          const initialFirstName = userData.firstName ?? ""
-          const initialLastName = userData.lastName ?? ""
-          const initialBio = userData.bio ?? ""
-          const initialBirth = userData.birthDate ? userData.birthDate.slice(0, 10) : ""
+        const initialFirstName = userData.firstName ?? "";
+        const initialLastName = userData.lastName ?? "";
+        const initialBio = userData.bio ?? "";
+        const initialBirth = userData.birthDate ? userData.birthDate.slice(0, 10) : "";
 
-          // Si les champs sont vides mais qu'on a un nom complet (ex: Google)
-          if (!initialFirstName && !initialLastName && userData.name) {
-            const nameParts = userData.name.split(' ')
-            setFirstName(nameParts[0] || "")
-            setLastName(nameParts.slice(1).join(' ') || "")
-          } else {
-            setFirstName(initialFirstName)
-            setLastName(initialLastName)
-          }
-
-          setBio(initialBio)
-          setBirthDate(initialBirth)
-
-          // Déterminer si c'est une première connexion
-          const hasProfileData = !!(userData.firstName && userData.lastName);
-          if (!hasProfileData) {
-            setIsFirstLogin(true)
-          }
+        if (!initialFirstName && !initialLastName && userData.name) {
+          const nameParts = userData.name.split(' ');
+          setFirstName(nameParts[0] || "");
+          setLastName(nameParts.slice(1).join(' ') || "");
+        } else {
+          setFirstName(initialFirstName);
+          setLastName(initialLastName);
         }
-      } catch {
-        setError("Impossible de joindre le serveur. Vérifie le backend.")
-      } finally {
-        setLoadingMe(false)
+
+        setBio(initialBio);
+        setBirthDate(initialBirth);
+
+        if (!(userData.firstName && userData.lastName)) {
+          setIsFirstLogin(true);
+        }
       }
+    } catch {
+      setError("Impossible de joindre le serveur. Vérifie le backend.");
+    } finally {
+      setLoadingMe(false);
     }
+  };
 
-    run()
-  }, [])
+  useEffect(() => {
+    loadProfileData();
+  }, []);
 
-  // handleSave
-  const handleSave = async (e: React.SyntheticEvent) => {
-  e.preventDefault()
-  setError("")
-  setSuccess("")
-  setFieldErrors({})
-
-  const payload = {
-    firstName: firstName.trim(),
-    lastName: lastName.trim(),
-    bio,
-    birthDate: birthDate || undefined,
-  }
-
-  const vErrors = validateProfile(payload)
-  if (vErrors.firstName || vErrors.lastName || vErrors.bio) {
-    setFieldErrors(vErrors)
-    return
-  }
-
-  setSaving(true)
-  try {
-    const newName = `${payload.firstName} ${payload.lastName}`
-
-    // 1) Garder ton calcul AI
-    const { score: newScore, bioStatus } = aiService.calculateTrustScore({
-      name: newName,
-      email: me?.email || "",
-      bio: payload.bio,
-      picture: me?.picture,
-      googleName: me?.googleName,
-    })
-
-    // 2) Ajouter la sauvegarde backend
+  const saveToBackend = async (payload: any) => {
     const res = await authFetch("/users/me", {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    })
-
-    const data = await res.json().catch(() => ({}))
-
+    });
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       if (data.code === "BIO_MODERATION_REJECTED") {
-        setFieldErrors((prev) => ({
-          ...prev,
-          bio: data.message || "Bio refusée",
-        }))
+        setFieldErrors((prev) => ({ ...prev, bio: data.message || "Bio refusée" }));
       } else {
-        setError(
-          Array.isArray(data.message)
-            ? data.message.join(", ")
-            : data.message || "Erreur lors de la mise à jour."
-        )
+        setError(Array.isArray(data.message) ? data.message.join(", ") : data.message || "Erreur lors de la mise à jour.");
       }
-      return
+      return null;
+    }
+    return data;
+  };
+
+  const handleSave = async (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setFieldErrors({});
+
+    const payload = {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      bio,
+      birthDate: birthDate || undefined,
+    };
+
+    const vErrors = validateProfile(payload);
+    if (vErrors.firstName || vErrors.lastName || vErrors.bio) {
+      setFieldErrors(vErrors);
+      return;
     }
 
-    // 3) Garder ta logique locale existante
-    const updatedUser = {
-      ...me,
-      ...data,
-      firstName: payload.firstName,
-      lastName: payload.lastName,
-      name: newName,
-      bio: payload.bio,
-      aiScore: newScore,
-      birthDate: payload.birthDate,
-    } as MeUser
+    setSaving(true);
+    try {
+      const newName = `${payload.firstName} ${payload.lastName}`;
+      const { score: newScore, bioStatus } = aiService.calculateTrustScore({
+        name: newName,
+        email: me?.email || "",
+        bio: payload.bio,
+        picture: me?.picture,
+        googleName: me?.googleName,
+      });
 
-    localStorage.setItem("user", JSON.stringify(updatedUser))
-    updateSessionUser({
-      firstName: payload.firstName,
-      lastName: payload.lastName,
-    })
+      const backendData = await saveToBackend(payload);
+      if (!backendData) return;
 
-    const { historyService } = await import("@/services/historyService")
-    const used2FA = await historyService.was2FAUsedRecently()
+      const updatedUser = {
+        ...me,
+        ...backendData,
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        name: newName,
+        bio: payload.bio,
+        aiScore: newScore,
+        birthDate: payload.birthDate,
+      } as MeUser;
 
-    historyService.updateUserScoreSimple(
-      "success",
-      used2FA,
-      newScore,
-      {
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      updateSessionUser({ firstName: payload.firstName, lastName: payload.lastName });
+
+      const { historyService } = await import("@/services/historyService");
+      const used2FA = await historyService.was2FAUsedRecently();
+
+      historyService.updateUserScoreSimple("success", used2FA, newScore, {
         nameConsistency: newScore < 0.6 ? 0.4 : 1.0,
-        bioStatus: bioStatus,
+        bioStatus,
+      });
+
+      setMe(updatedUser);
+      setSuccess("Profil mis à jour.");
+
+      if (me?.googleName && newName.toLowerCase().trim() !== me.googleName.toLowerCase().trim()) {
+        setError("Note: Votre nom diffère de celui de Google. Votre score de confiance a été ajusté.");
       }
-    )
-
-    setMe(updatedUser)
-    setSuccess("Profil mis à jour.")
-
-    if (
-      me?.googleName &&
-      newName.toLowerCase().trim() !== me.googleName.toLowerCase().trim()
-    ) {
-      setError(
-        "Note: Votre nom diffère de celui de Google. Votre score de confiance a été ajusté."
-      )
+    } catch (err: any) {
+      setError(err?.message || "Erreur réseau.");
+    } finally {
+      setSaving(false);
     }
-  } catch (err: any) {
-    setError(err?.message || "Erreur réseau.")
-  } finally {
-    setSaving(false)
-  }
-}
+  };
 
   const handleDelete = async () => {
     setError("")
@@ -273,9 +244,12 @@ export default function ProfilePage() {
           <form onSubmit={handleSave} className="bg-white border border-slate-200 rounded-xl p-6 space-y-5">
             {(() => {
               if (!error && !success) return null;
+              
               let style = "text-emerald-700 bg-emerald-50";
-              if (error && !success) style = "text-red-600 bg-red-50";
-              if (error && success) style = "text-yellow-700 bg-yellow-50";
+              if (error) {
+                style = success ? "text-yellow-700 bg-yellow-50" : "text-red-600 bg-red-50";
+              }
+              
               return (
                 <p className={`text-sm p-3 rounded-lg ${style}`}>
                   {error || success}

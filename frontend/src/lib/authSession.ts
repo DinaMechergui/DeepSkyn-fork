@@ -171,6 +171,42 @@ async function getCsrfToken(): Promise<string> {
   }
 }
 
+async function handleTokenRefresh(originalUrl: string, options: RequestInit, headers: HeadersInit): Promise<Response | null> {
+  try {
+    const csrfToken = await getCsrfToken()
+    const refreshRes = await fetch(`${API_URL}/auth/refresh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrfToken,
+      },
+      credentials: 'include',
+      body: JSON.stringify({ refreshToken: getRefreshToken() }),
+    })
+    const data = await refreshRes.json().catch(() => ({}))
+    if (refreshRes.ok && data.accessToken) {
+      setSession({
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        accessTokenExpiresAt: data.accessTokenExpiresAt,
+        refreshTokenExpiresAt: data.refreshTokenExpiresAt,
+        user: data.user,
+      })
+      const newAccess = getAccessToken()
+      if (newAccess) {
+        (headers as Record<string, string>)["Authorization"] = `Bearer ${newAccess}`
+        return fetch(originalUrl, { ...options, headers, credentials: 'include' })
+      }
+    } else {
+      clearSession()
+    }
+  } catch (error) {
+    console.error('Token refresh failed:', error)
+    clearSession()
+  }
+  return null;
+}
+
 export const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
   recordActivity()
   const access = getAccessToken()
@@ -200,37 +236,9 @@ export const authFetch = async (url: string, options: RequestInit = {}): Promise
 
   // Si c'est une erreur 401 et qu'on a un token temporaire (Google), ne pas essayer de rafraîchir
   if (res.status === 401 && getRefreshToken() && !getAccessToken()?.startsWith('google_')) {
-    try {
-      const csrfToken = await getCsrfToken()
-      const refreshRes = await fetch(`${API_URL}/auth/refresh`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken,
-        },
-        credentials: 'include',
-        body: JSON.stringify({ refreshToken: getRefreshToken() }),
-      })
-      const data = await refreshRes.json().catch(() => ({}))
-      if (refreshRes.ok && data.accessToken) {
-        setSession({
-          accessToken: data.accessToken,
-          refreshToken: data.refreshToken,
-          accessTokenExpiresAt: data.accessTokenExpiresAt,
-          refreshTokenExpiresAt: data.refreshTokenExpiresAt,
-          user: data.user,
-        })
-        const newAccess = getAccessToken()
-        if (newAccess) {
-          (headers as Record<string, string>)["Authorization"] = `Bearer ${newAccess}`
-          res = await fetch(finalUrl, { ...options, headers, credentials: 'include' })
-        }
-      } else {
-        clearSession()
-      }
-    } catch (error) {
-      console.error('Token refresh failed:', error)
-      clearSession()
+    const retryRes = await handleTokenRefresh(finalUrl, options, headers);
+    if (retryRes) {
+      res = retryRes;
     }
   }
 
