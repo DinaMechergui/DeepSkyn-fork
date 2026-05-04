@@ -26,7 +26,8 @@ pipeline {
                 sh "cat /etc/hosts"
                 sh "getent hosts github.com || echo 'DNS : github.com inconnu'"
                 echo "--- Test de connexion SonarQube ---"
-                sh "curl -v ${SONAR_HOST_URL}/api/system/status --connect-timeout 5 || echo 'ERREUR CRITIQUE : Le Pare-feu de ton PC bloque probablement le port 9000'"
+                sh "curl -v http://172.20.10.5:9000/api/system/status --connect-timeout 2 || echo 'FAIL: 172.20.10.5 injoignable'"
+                sh "curl -v http://172.17.0.1:9000/api/system/status --connect-timeout 2 || echo 'FAIL: 172.17.0.1 injoignable'"
                 sh "curl -I https://140.82.121.3 --insecure --connect-timeout 5 || echo 'Réseau : IP injoignable'"
             }
         }
