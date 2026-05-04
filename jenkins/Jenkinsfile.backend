@@ -13,10 +13,7 @@ pipeline {
         NETWORK_NAME    = 'deepskyn_network'
         IMAGE_NAME      = "${PROJECT_NAME}-${SERVICE_NAME}"
         IMAGE_TAG       = "${env.BUILD_NUMBER}"
-        PORT            = '3001'
-        PORT            = '3001'
-        PORT            = '3001'
-        PORT            = '3001'
+
         // IP de la passerelle Docker (Vérifiée via Diagnostic Réseau)
         SONAR_HOST_URL  = "http://172.17.0.1:9000"
     }
