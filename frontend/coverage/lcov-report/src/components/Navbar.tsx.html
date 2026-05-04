@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">5.4% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/185</span>
+                <span class='fraction'>10/185</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/1</span>
-            </div>
-        
-            
-            <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
-                <span class="quiet">Functions</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>0/0</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/2</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">5.4% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/185</span>
+                <span class='fraction'>10/185</span>
             </div>
         
             
@@ -282,22 +282,22 @@
 <a name='L217'></a><a href='#L217'>217</a>
 <a name='L218'></a><a href='#L218'>218</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -499,22 +499,22 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">"use client"
 &nbsp;
-<span class="cstat-no" title="statement not covered" >import { useState } from "react"</span>
-<span class="cstat-no" title="statement not covered" >import { Link, useLocation, useNavigate } from "react-router-dom"</span>
-<span class="cstat-no" title="statement not covered" >import { Button } from "@/components/ui/button"</span>
-<span class="cstat-no" title="statement not covered" >import { Menu, X, LogOut, Settings, LayoutDashboard, Sparkles } from "lucide-react"</span>
-<span class="cstat-no" title="statement not covered" >import { useTranslation } from "react-i18next"</span>
-<span class="cstat-no" title="statement not covered" >import LanguageSwitcher from "./LanguageSwitcher"</span>
-<span class="cstat-no" title="statement not covered" >import { getUser, logout } from "@/lib/authSession"</span>
-<span class="cstat-no" title="statement not covered" >import { simpleAuthService } from "@/services/authService-simple"</span>
+import { useState } from "react"
+import { Link, useLocation, useNavigate } from "react-router-dom"
+import { Button } from "@/components/ui/button"
+import { Menu, X, LogOut, Settings, LayoutDashboard, Sparkles } from "lucide-react"
+import { useTranslation } from "react-i18next"
+import LanguageSwitcher from "./LanguageSwitcher"
+import { getUser, logout } from "@/lib/authSession"
+import { simpleAuthService } from "@/services/authService-simple"
 &nbsp;
-<span class="cstat-no" title="statement not covered" >const getLoggedOutLinks = (t: any) =&gt; [</span>
+const getLoggedOutLinks = <span class="fstat-no" title="function not covered" >(t: any) =&gt; [</span>
 <span class="cstat-no" title="statement not covered" >  { href: "/", label: t('nav.home') },</span>
 <span class="cstat-no" title="statement not covered" >  { href: "/products", label: t('nav.products') },</span>
 <span class="cstat-no" title="statement not covered" >  { href: "/pricing", label: t('nav.plans', { defaultValue: 'Plans' }) },</span>
 <span class="cstat-no" title="statement not covered" >]</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >export function Navbar() {</span>
+export <span class="fstat-no" title="function not covered" >function Navbar() {</span>
 <span class="cstat-no" title="statement not covered" >  const { t } = useTranslation()</span>
 <span class="cstat-no" title="statement not covered" >  const [isOpen, setIsOpen] = useState(false)</span>
 <span class="cstat-no" title="statement not covered" >  const location = useLocation()</span>
@@ -721,7 +721,7 @@
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-05-04T21:38:41.241Z
+                at 2026-05-04T21:50:06.621Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

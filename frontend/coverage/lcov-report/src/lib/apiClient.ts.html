@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">3.7% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/27</span>
+                <span class='fraction'>1/27</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/1</span>
-            </div>
-        
-            
-            <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
-                <span class="quiet">Functions</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>0/0</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/4</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">3.7% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/27</span>
+                <span class='fraction'>1/27</span>
             </div>
         
             
@@ -95,7 +95,7 @@
 <a name='L30'></a><a href='#L30'>30</a>
 <a name='L31'></a><a href='#L31'>31</a>
 <a name='L32'></a><a href='#L32'>32</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -126,15 +126,15 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// frontend/src/lib/apiClient.ts
-<span class="cstat-no" title="statement not covered" >import { authFetch } from './authSession';</span>
+import { authFetch } from './authSession';
 &nbsp;
-<span class="cstat-no" title="statement not covered" >export async function apiGet&lt;T&gt;(endpoint: string): Promise&lt;T&gt; {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export async function apiGet&lt;T&gt;(endpoint: string): Promise&lt;T&gt; {</span></span>
 <span class="cstat-no" title="statement not covered" >  const res = await authFetch(endpoint, { method: 'GET' });</span>
 <span class="cstat-no" title="statement not covered" >  if (!res.ok) throw new Error(await res.text());</span>
 <span class="cstat-no" title="statement not covered" >  return res.json();</span>
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >export async function apiPost&lt;T&gt;(endpoint: string, data?: any): Promise&lt;T&gt; {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export async function apiPost&lt;T&gt;(endpoint: string, data?: any): Promise&lt;T&gt; {</span></span>
 <span class="cstat-no" title="statement not covered" >  const res = await authFetch(endpoint, {</span>
 <span class="cstat-no" title="statement not covered" >    method: 'POST',</span>
 <span class="cstat-no" title="statement not covered" >    body: data ? JSON.stringify(data) : undefined,</span>
@@ -143,7 +143,7 @@
 <span class="cstat-no" title="statement not covered" >  return res.json();</span>
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >export async function apiPut&lt;T&gt;(endpoint: string, data?: any): Promise&lt;T&gt; {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export async function apiPut&lt;T&gt;(endpoint: string, data?: any): Promise&lt;T&gt; {</span></span>
 <span class="cstat-no" title="statement not covered" >  const res = await authFetch(endpoint, {</span>
 <span class="cstat-no" title="statement not covered" >    method: 'PUT',</span>
 <span class="cstat-no" title="statement not covered" >    body: data ? JSON.stringify(data) : undefined,</span>
@@ -152,7 +152,7 @@
 <span class="cstat-no" title="statement not covered" >  return res.json();</span>
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >export async function apiDelete&lt;T&gt;(endpoint: string): Promise&lt;T&gt; {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export async function apiDelete&lt;T&gt;(endpoint: string): Promise&lt;T&gt; {</span></span>
 <span class="cstat-no" title="statement not covered" >  const res = await authFetch(endpoint, { method: 'DELETE' });</span>
 <span class="cstat-no" title="statement not covered" >  if (!res.ok) throw new Error(await res.text());</span>
 <span class="cstat-no" title="statement not covered" >  return res.json();</span>
@@ -163,7 +163,7 @@
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-05-04T21:38:41.241Z
+                at 2026-05-04T21:50:06.621Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
