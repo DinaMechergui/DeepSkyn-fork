@@ -14,7 +14,8 @@ pipeline {
         IMAGE_TAG       = "${env.BUILD_NUMBER}"
         VITE_API_URL    = "http://localhost:3001/api"
         VITE_GOOGLE_ID  = "203522484031-m9h6cfvjleufa23gir16pujbnctchqch.apps.googleusercontent.com"
-        SONAR_HOST_URL  = "http://172.20.10.18:9000"
+        // Utilise host.docker.internal si Jenkins est dans Docker sur Windows/Mac
+        SONAR_HOST_URL  = "http://host.docker.internal:9000"
     }
 
     stages {
@@ -23,6 +24,8 @@ pipeline {
                 echo "--- Vérification du réseau Jenkins ---"
                 sh "cat /etc/hosts"
                 sh "getent hosts github.com || echo 'DNS : github.com inconnu'"
+                echo "--- Test de connexion SonarQube ---"
+                sh "curl -I ${SONAR_HOST_URL} --connect-timeout 5 || echo 'ERREUR : SonarQube injoignable sur ${SONAR_HOST_URL}'"
             }
         }
 
