@@ -16,6 +16,8 @@ export interface SkinAdvice {
 
 export const weatherService = {
   async getWeatherData(): Promise<WeatherData> {
+    // Geolocation is necessary to provide location-specific skin care advice
+    // based on local UV index, humidity, and temperature.
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
         reject(new Error('Geolocation not supported'));

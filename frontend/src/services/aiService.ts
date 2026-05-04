@@ -49,7 +49,10 @@ class AIService {
       quality = 0.2;
     } else if (photoUrl.startsWith('https://')) {
       quality = 0.6;
-      hasFace = Math.random() > 0.5;
+      // Secure random check
+      const array = new Uint8Array(1);
+      window.crypto.getRandomValues(array);
+      hasFace = array[0] > 127;
     }
 
     console.log(`🎭 isRealPhoto: ${isRealPhoto}, quality=${quality}, hasFace=${hasFace}`);
@@ -117,9 +120,11 @@ class AIService {
         trustScore -= 0.15;
       }
 
-      // Vérifier format email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (emailRegex.test(email)) trustScore += 0.1;
+      // Vérifier format email (protection ReDoS avec limite de longueur)
+      if (email.length < 255) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (emailRegex.test(email)) trustScore += 0.1;
+      }
 
       // Pénaliser les emails suspects
       if (domain.includes('temp') || domain.includes('fake') || domain.includes('10minutemail')) {

@@ -91,7 +91,10 @@ const drawHeader = (doc: any, plan: string) => {
   
   doc.setTextColor(TEAL);
   doc.setFontSize(10);
-  doc.text(`REPORT ID: DS-${Math.random().toString(36).substring(2, 11).toUpperCase()}`, 145, 20);
+  const randomArray = new Uint32Array(1);
+  window.crypto.getRandomValues(randomArray);
+  const reportId = `DS-${randomArray[0].toString(36).toUpperCase()}`;
+  doc.text(`REPORT ID: ${reportId}`, 145, 20);
   doc.text(`DATE: ${new Date().toLocaleDateString()}`, 145, 26);
   doc.text(`${plan} ACCESS LEVEL`, 145, 32);
 };
