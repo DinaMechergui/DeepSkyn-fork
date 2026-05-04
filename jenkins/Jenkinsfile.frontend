@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'Node18'
+    }
+
     environment {
         PROJECT_NAME    = 'deepskyn'
         SERVICE_NAME    = 'frontend'
@@ -8,12 +12,9 @@ pipeline {
         NETWORK_NAME    = 'deepskyn_network'
         IMAGE_NAME      = "${PROJECT_NAME}-${SERVICE_NAME}"
         IMAGE_TAG       = "${env.BUILD_NUMBER}"
-        // Variables pour le build React
         VITE_API_URL    = "http://localhost:3001/api"
         VITE_GOOGLE_ID  = "203522484031-m9h6cfvjleufa23gir16pujbnctchqch.apps.googleusercontent.com"
     }
-
-   
 
     stages {
         stage('🔍 Diagnostic Réseau') {
@@ -82,7 +83,6 @@ pipeline {
                 sh 'cd frontend && npm run build'
             }
         }
-
     }
 
     post {

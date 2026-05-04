@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'Node18'
+    }
+
     environment {
         PROJECT_NAME    = 'deepskyn'
         SERVICE_NAME    = 'backend'
@@ -22,14 +26,9 @@ pipeline {
             }
         }
 
-        tools {
-        nodejs 'Node18'
-    }
-
         stage('📦 Checkout') {
             steps {
                 echo "📦 Récupération du code depuis GitHub..."
-                // Utilisation de l'IP directe si le DNS échoue
                 script {
                     try {
                         git branch: 'master', url: 'https://github.com/rouabougattaya/DeepSkyn.git'
@@ -65,8 +64,6 @@ pipeline {
         stage('📊 SonarQube Analysis') {
             steps {
                 echo "📊 Analyse du code avec SonarQube..."
-                // Utilise le serveur SonarQube configuré dans Jenkins sous le nom 'sonarqube'
-                // Assurez-vous d'avoir installé le plugin SonarQube Scanner sur Jenkins
                 withSonarQubeEnv('sonarqube') {
                     sh '''
                         cd backend
@@ -88,7 +85,6 @@ pipeline {
                 sh 'cd backend && npm run build'
             }
         }
-
     }
 
     post {
