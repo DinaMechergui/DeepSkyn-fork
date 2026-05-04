@@ -132,9 +132,12 @@ export default function RoutinesPage() {
       const res = await authFetch(`/analysis/user?limit=1`, { method: "GET" });
       if (!res.ok) return;
       const data = await res.json();
-      if (data?.data?.length > 0) {
-        const fullRes = await authFetch(`/analysis/${data.data[0].id}`, { method: "GET" });
-        if (fullRes.ok) setLatestAnalysis(await fullRes.json());
+      const firstId = data?.data?.[0]?.id;
+      if (!firstId) return;
+
+      const fullRes = await authFetch(`/analysis/${firstId}`, { method: "GET" });
+      if (fullRes.ok) {
+        setLatestAnalysis(await fullRes.json());
       }
     } catch (err) {
       console.error("Failed to fetch latest analysis", err);

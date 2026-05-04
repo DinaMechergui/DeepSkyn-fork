@@ -59,14 +59,12 @@ export default function SkinRecommendationsPage() {
             setLoading(true);
             setLoadError(null);
 
-            // Priority 1: passed via navigate state
             if (location.state?.profile) {
                 setProfile(location.state.profile as UserSkinProfile);
                 setLoading(false);
                 return;
             }
 
-            // Priority 2: stored profile after last analysis
             try {
                 const rawProfile = localStorage.getItem('skinAnalysisProfile');
                 if (rawProfile) {
@@ -75,7 +73,6 @@ export default function SkinRecommendationsPage() {
                     return;
                 }
 
-                // Priority 3: stored result after last analysis
                 const rawResult = localStorage.getItem('skinAnalysisResult');
                 if (rawResult) {
                     const result = JSON.parse(rawResult) as GlobalScoreResult;
@@ -87,15 +84,12 @@ export default function SkinRecommendationsPage() {
                 console.error("Local storage parse error", e);
             }
 
-            // Priority 4: Fetch latest analysis from server
             if (user?.id) {
                 try {
                     const history = await comparisonService.getUserAnalyses(1, 1);
-                    if (history.data && history.data.length > 0) {
-                        const latestId = history.data[0].id;
-                        const detailed = await comparisonService.getAnalysis(latestId);
-                        
-                        // Map detailed (ComparedAnalysisItem) to profile
+                    const latest = history.data?.[0];
+                    if (latest) {
+                        const detailed = await comparisonService.getAnalysis(latest.id);
                         setProfile({
                             skinType: 'Normal',
                             age: detailed.realAge || detailed.skinAge || 25,

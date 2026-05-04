@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
     Sparkles, Zap, AlertCircle, GitCompare,
     CheckCircle, RefreshCw, Activity,
-    BarChart2, Info,
+    BarChart2,
     CircleCheck, AlertTriangle, BarChart3,
     Upload, X, Download, Volume2, VolumeX,
     Loader2, ArrowUpCircle, Lock, Calendar, FlaskConical,
@@ -131,7 +131,7 @@ function ImageUploadArea({ profile, loading, t, fileInputRef, handleImageUpload,
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 16 }}>
         {profile.imagesBase64?.map((img: string, idx: number) => (
-          <div key={`img-${idx}`} style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', height: 160, border: '2px solid #e2e8f0', boxShadow: '0 8px 16px rgba(0,0,0,0.12)', transition: 'all 0.3s' }}>
+          <div key={img.substring(0, 20)} style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', height: 160, border: '2px solid #e2e8f0', boxShadow: '0 8px 16px rgba(0,0,0,0.12)', transition: 'all 0.3s' }}>
             <img src={img} alt={`Preview ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             <button
               onClick={() => removeImage(idx)}
@@ -192,7 +192,12 @@ function ErrorDisplay({ error, t, navigate }: any) {
   const isNoFace = error.includes('visage humain');
   const isWarning = isLimit || isNoFace;
 
-  return (
+        const errorTitle = (() => {
+          if (isLimit) return 'Limite mensuelle atteinte';
+          if (isNoFace) return 'Image non reconnue';
+          return "Erreur d'analyse";
+        })();
+        return (
     <div style={{
       background: isWarning ? 'rgba(245,158,11,0.08)' : 'rgba(239,68,68,0.08)',
       border: isWarning ? '1px solid rgba(245,158,11,0.2)' : '1px solid rgba(239,68,68,0.2)',
@@ -201,7 +206,7 @@ function ErrorDisplay({ error, t, navigate }: any) {
       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
         <AlertCircle size={18} style={{ color: isWarning ? '#f59e0b' : '#ef4444', flexShrink: 0 }} />
         <p style={{ fontSize: 13, fontWeight: 700, color: isWarning ? '#b45309' : '#b91c1c', margin: 0 }}>
-          {isLimit ? 'Limite mensuelle atteinte' : isNoFace ? 'Image non reconnue' : 'Erreur d\'analyse'}
+          {errorTitle}
         </p>
       </div>
       <p style={{ fontSize: 12, color: isWarning ? '#92400e' : '#fca5a5', lineHeight: 1.5, margin: 0 }}>
@@ -481,7 +486,14 @@ function PrintableReport({ result, profile, CONDITION_META, t, BLEND_LABELS, dis
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a' }}>{t('analysis.pdf.expert_report', { defaultValue: 'RAPPORT ANALYTIQUE EXPERT' })}</div>
             <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>ID: #{new Date().getTime().toString().slice(-8)}</div>
-            <div style={{ fontSize: 12, color: '#94a3b8' }}>{t('analysis.pdf.generated_on', { defaultValue: 'Généré le' })} {new Date().toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : i18n.language === 'en' ? 'en-US' : 'fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+            <div style={{ fontSize: 12, color: '#94a3b8' }}>{(() => {
+              if (i18n.language === 'ar') return 'ar-SA';
+              if (i18n.language === 'en') return 'en-US';
+              return 'fr-FR';
+            })()} {t('analysis.pdf.generated_on', { defaultValue: 'Généré le' })} {new Date().toLocaleDateString(
+              i18n.language === 'ar' ? 'ar-SA' : i18n.language === 'en' ? 'en-US' : 'fr-FR',
+              { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }
+            )}</div>
           </div>
         </div>
 
@@ -490,7 +502,11 @@ function PrintableReport({ result, profile, CONDITION_META, t, BLEND_LABELS, dis
             <div style={{ fontSize: 13, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: 20, letterSpacing: '0.05em' }}>{t('analysis.health_score_title')}</div>
             <div style={{ fontSize: 80, fontWeight: 900, color: globalScoreColor, lineHeight: 1, letterSpacing: '-0.05em' }}>{Math.round(result.globalScore)}<span style={{ fontSize: 24, color: '#94a3b8' }}>/100</span></div>
             <div style={{ marginTop: 20, padding: '8px 20px', borderRadius: 99, display: 'inline-block', background: `${globalScoreColor}15`, color: globalScoreColor, fontSize: 16, fontWeight: 800, textTransform: 'uppercase' }}>
-              {result.globalScore >= 75 ? t('analysis.optimal') : result.globalScore >= 50 ? t('analysis.moderate') : t('analysis.critical')}
+            {(() => {
+              if (result.globalScore >= 75) return t('analysis.optimal');
+              if (result.globalScore >= 50) return t('analysis.moderate');
+              return t('analysis.critical');
+            })()}
             </div>
             <div style={{ borderTop: '1px solid #e2e8f0', marginTop: 30, paddingTop: 20, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
@@ -543,12 +559,16 @@ function PrintableReport({ result, profile, CONDITION_META, t, BLEND_LABELS, dis
               const meta = CONDITION_META[c.type];
               const details = CONDITION_DETAILS[c.type];
               const scoreValue = typeof c.score === 'number' ? c.score : 0;
-              const color = scoreValue >= 75 ? '#10b981' : scoreValue >= 50 ? '#f59e0b' : '#ef4444';
+              const scoreColor = (() => {
+                if (scoreValue >= 75) return '#10b981';
+                if (scoreValue >= 50) return '#f59e0b';
+                return '#ef4444';
+              })();
               return (
                 <div key={c.type} className="no-break" style={{ padding: 22, borderRadius: 20, border: '1px solid #f1f5f9', background: '#fff', marginBottom: 15, display: 'inline-block', width: '100%', boxSizing: 'border-box' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 10, background: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: `${scoreColor}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: scoreColor }}>
                         {meta?.icon ? <meta.icon size={20} /> : <Activity size={20} />}
                       </div>
                       <div>
@@ -557,8 +577,8 @@ function PrintableReport({ result, profile, CONDITION_META, t, BLEND_LABELS, dis
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 24, fontWeight: 900, color }}>{typeof c.score === 'number' ? `${Math.round(c.score)}/100` : '—'}</div>
-                      <div style={{ fontSize: 10, fontWeight: 800, color, textTransform: 'uppercase' }}>{t('analysis.pdf.expert_score', { defaultValue: 'Expert Score' })}</div>
+                      <div style={{ fontSize: 24, fontWeight: 900, color: scoreColor }}>{typeof c.score === 'number' ? `${Math.round(c.score)}/100` : '—'}</div>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: scoreColor, textTransform: 'uppercase' }}>{t('analysis.pdf.expert_score', { defaultValue: 'Expert Score' })}</div>
                     </div>
                   </div>
                   {details && (
@@ -566,13 +586,13 @@ function PrintableReport({ result, profile, CONDITION_META, t, BLEND_LABELS, dis
                       <div>
                         <div style={{ fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: 8 }}>{t('analysis.pdf.probable_causes', { defaultValue: 'Causes Probables' })}</div>
                         <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-                          {details.causes.map((cause: string) => <li key={cause} style={{ fontSize: 12, color: '#64748b', marginBottom: 4, display: 'flex', gap: 6 }}><span style={{ color }}>•</span> {cause}</li>)}
+                          {details.causes.map((cause: string) => <li key={cause} style={{ fontSize: 12, color: '#64748b', marginBottom: 4, display: 'flex', gap: 6 }}><span style={{ color: scoreColor }}>•</span> {cause}</li>)}
                         </ul>
                       </div>
                       <div>
                         <div style={{ fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: 8 }}>{t('analysis.pdf.care_advice', { defaultValue: 'Conseils de Soins' })}</div>
                         <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-                          {details.careRecommendations.map((reco: string) => <li key={reco} style={{ fontSize: 12, color: '#64748b', marginBottom: 4, display: 'flex', gap: 6 }}><span style={{ color }}>✔</span> {reco}</li>)}
+                          {details.careRecommendations.map((reco: string) => <li key={reco} style={{ fontSize: 12, color: '#64748b', marginBottom: 4, display: 'flex', gap: 6 }}><span style={{ color: scoreColor }}>✔</span> {reco}</li>)}
                         </ul>
                       </div>
                     </div>
@@ -599,7 +619,7 @@ function PrintableReport({ result, profile, CONDITION_META, t, BLEND_LABELS, dis
                 <Sun size={24} color="#0369a1" /> <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0369a1', margin: 0 }}>{t('analysis.pdf.morning_routine')}</h3>
               </div>
               {routineResult.morning.map((step: any, i: number) => (
-                <div key={`morning-${i}`} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', marginBottom: 10 }}>
+                <div key={step.stepName || `morning-${i}`} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', marginBottom: 10 }}>
                   <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#0369a1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{i + 1}</div>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 800 }}>{step.stepName} — <span style={{ color: '#0369a1' }}>{step.product?.name}</span></div>
@@ -613,7 +633,7 @@ function PrintableReport({ result, profile, CONDITION_META, t, BLEND_LABELS, dis
                 <Moon size={24} color="#5b21b6" /> <h3 style={{ fontSize: 18, fontWeight: 800, color: '#5b21b6', margin: 0 }}>{t('analysis.pdf.night_routine')}</h3>
               </div>
               {routineResult.night.map((step: any, i: number) => (
-                <div key={`night-${i}`} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', marginBottom: 10 }}>
+                <div key={step.stepName || `night-${i}`} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', marginBottom: 10 }}>
                   <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#5b21b6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{i + 1}</div>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 800 }}>{step.stepName} — <span style={{ color: '#5b21b6' }}>{step.product?.name}</span></div>
@@ -643,7 +663,7 @@ function PrintableReport({ result, profile, CONDITION_META, t, BLEND_LABELS, dis
 
 function buildAnalysisSummary(r: GlobalScoreResult | null, t: any, CONDITION_META: any) {
     if (!r) return '';
-    const evaluated = (r.conditionScores || []).filter(c => c?.evaluated !== false && typeof c?.score === 'number') as ConditionScore[];
+    const evaluated = (r.conditionScores || []).filter(c => c?.evaluated !== false && typeof c?.score === 'number');
     if (evaluated.length === 0) {
         return t('analysis.no_data_provided_desc', { defaultValue: "Aucune condition n'a pu être évaluée. Ajoutez un selfie (recommandé) ou renseignez vos niveaux (acné, pores, rougeurs, hydratation, rides) pour obtenir un diagnostic fiable et des solutions adaptées." });
     }
@@ -852,7 +872,12 @@ export default function SkinAnalysisPage() {
         });
 
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = i18n.language === 'ar' ? 'ar-SA' : i18n.language === 'en' ? 'en-US' : 'fr-FR';
+        const langCode = (() => {
+          if (i18n.language === 'ar') return 'ar-SA';
+          if (i18n.language === 'en') return 'en-US';
+          return 'fr-FR';
+        })();
+        utterance.lang = langCode;
         utterance.onend = () => setIsSpeaking(false);
 
         setIsSpeaking(true);
@@ -956,11 +981,13 @@ export default function SkinAnalysisPage() {
             }, 1000);
         } catch (err: any) {
             console.error('Analysis error:', err);
-            const errorMsg = err.message?.includes('LIMIT_REACHED')
-                ? "LIMIT_REACHED"
-                : err.message?.includes('visage humain')
-                    ? t('analysis.errors.no_face_detected', { defaultValue: 'Image non reconnue : aucun visage humain détecté.' })
-                    : `${t('analysis.errors.generic_analysis_fail', { defaultValue: "Erreur d'analyse" })} : ${err.message || t('analysis.errors.connection_fail', { defaultValue: 'Impossible de se connecter au serveur.' })}`;
+            const errorMsg = (() => {
+              if (err.message?.includes('LIMIT_REACHED')) return 'LIMIT_REACHED';
+              if (err.message?.includes('visage humain')) {
+                return t('analysis.errors.no_face_detected', { defaultValue: 'Image non reconnue : aucun visage humain détecté.' });
+              }
+              return `${t('analysis.errors.generic_analysis_fail', { defaultValue: "Erreur d'analyse" })} : ${err.message || t('analysis.errors.connection_fail', { defaultValue: 'Impossible de se connecter au serveur.' })}`;
+            })();
             setError(errorMsg);
             setScanPhase('idle');
         } finally {

@@ -146,101 +146,22 @@ export const exportInsightToPdf = (data: any) => {
 
     drawPageChrome();
 
-    // Template-aligned cover/header
-    doc.setFillColor(palette.teal600[0], palette.teal600[1], palette.teal600[2]);
-    doc.rect(0, 0, pageWidth, 42, 'F');
-    doc.setFillColor(palette.teal500[0], palette.teal500[1], palette.teal500[2]);
-    doc.rect(0, 0, 78, 42, 'F');
-    doc.setFillColor(palette.teal700[0], palette.teal700[1], palette.teal700[2]);
-    doc.rect(0, 36, pageWidth, 6, 'F');
-    doc.setTextColor(palette.white[0], palette.white[1], palette.white[2]);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.text('Skin Age Insights Report', 14, 16);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text('Personalized dermatology intelligence and action plan', 14, 23);
-    doc.text(`Generated on ${now.toLocaleString()}`, 14, 30);
-      
-    doc.setFillColor(palette.white[0], palette.white[1], palette.white[2]);
-    doc.roundedRect(136, 8, 58, 18, 3, 3, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(palette.teal700[0], palette.teal700[1], palette.teal700[2]);
-    doc.text('Premium Skin Intelligence', 140, 14);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(palette.slate700[0], palette.slate700[1], palette.slate700[2]);
-    doc.text(`Risk: ${riskLevel}`, 140, 18.5);
-    doc.text(`Score: ${fmt(score, '/100')}`, 168, 18.5);
-
+    drawCover(doc, pageWidth, palette, riskLevel, score, now);
     y = 50;
 
-    // KPI cards row
-    const scorePercent = Math.max(0, Math.min(100, score ?? 0));
-    const scoreColor = getScoreColor(scorePercent, palette);
-    metricCard(14, 'Skin Age Score', fmt(score, '/100'), scoreColor);
-    metricCard(60, 'User Age', fmt(realAge, ' yrs'), palette.teal500);
-    metricCard(106, 'Skin Age', fmt(skinAge, ' yrs'), palette.teal600);
-    metricCard(152, 'Age Delta', fmt(delta, ' yrs'), palette.teal700);
-    y += 30;
+    drawKPIs(doc, palette, score, realAge, skinAge, delta, riskLevel, metricCard);
+    y += 45;
 
-    // Progress strip
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(palette.slate700[0], palette.slate700[1], palette.slate700[2]);
-    doc.text(`Risk Level: ${riskLevel}`, 14, y);
-    doc.text(`Score Band: ${classifyScore(score)}`, 64, y);
-    doc.text(`Interpretation: ${classifyDelta(delta)}`, 108, y);
-    y += 4;
-    doc.setFillColor(palette.slate200[0], palette.slate200[1], palette.slate200[2]);
-    doc.roundedRect(14, y, 182, 5, 2, 2, 'F');
-    doc.setFillColor(scoreColor[0], scoreColor[1], scoreColor[2]);
-    doc.roundedRect(14, y, (182 * scorePercent) / 100, 5, 2, 2, 'F');
-    y += 11;
-
-    sectionHeader('User Profile', palette.teal500);
-    [
-      `User name: ${userCtx.name}`,
-      `User email: ${userCtx.email}`,
-      `Assessment date: ${insight?.latestAnalysis?.createdAt ? new Date(insight.latestAnalysis.createdAt).toLocaleString() : 'N/A'}`,
-      `Status flag: ${insight?.status || 'unknown'}`,
-    ].forEach((line) => paragraph(`- ${line}`));
+    drawProfile(doc, palette, userCtx, insight, sectionHeader, paragraph);
     y += 2;
 
-    sectionHeader('Executive Summary', palette.teal600);
-    paragraph(insight?.headline || 'No summary available.');
+    drawAnalysis(doc, palette, insight, analysisSummary, sectionHeader, paragraph);
     y += 2;
 
-    sectionHeader('Clinical Analysis', palette.teal700);
-    paragraph(analysisSummary);
+    drawTrends(doc, palette, insight, trendSeries, sectionHeader, paragraph, ensureSpace);
     y += 2;
 
-    sectionHeader('Trend Intelligence', palette.teal500);
-    if (trendSeries.length === 0) {
-      paragraph('- Not enough historical data.');
-    } else {
-      const avgTrendDelta = safeNum(insight?.trend?.averageDelta);
-      const latestTrendDelta = trendSeries.length > 0 ? safeNum(trendSeries[trendSeries.length - 1]?.delta) : null;
-      const earliestTrendDelta = trendSeries.length > 0 ? safeNum(trendSeries[0]?.delta) : null;
-      const trendShift = latestTrendDelta != null && earliestTrendDelta != null ? (latestTrendDelta - earliestTrendDelta) : null;
-
-      [
-        `Data points: ${trendSeries.length}`,
-        `Earliest delta: ${fmt(earliestTrendDelta, ' yrs')}`,
-        `Latest delta: ${fmt(latestTrendDelta, ' yrs')}`,
-        `Average delta: ${fmt(avgTrendDelta, ' yrs')}`,
-        `Shift: ${fmt(trendShift, ' yrs')}`,
-      ].forEach((line) => paragraph(`- ${line}`));
-
-      ensureSpace(34);
-      doc.setDrawColor(203, 213, 225);
-      doc.rect(18, y + 4, 170, 24);
-      y += 34;
-    }
-
-    sectionHeader('Recommended Actions', palette.teal600);
-    recommendedActions.forEach((tip: string, idx: number) => paragraph(`${idx + 1}. ${tip}`));
+    drawActions(doc, palette, recommendedActions, sectionHeader, paragraph);
 
     autoTable(doc, {
         startY: y + 10,
@@ -261,7 +182,95 @@ export const exportInsightToPdf = (data: any) => {
         doc.text(`Page ${i} of ${pageCount}`, pageWidth - 25, pageHeight - 10);
     }
 
-    doc.save(`skin-age-insights-${fileDate}.pdf`);
+    doc.save(`DeepSkyn-Insights-${fileDate}.pdf`);
+};
+
+export const drawCover = (doc: jsPDF, pageWidth: number, palette: any, riskLevel: string, score: number, now: Date) => {
+    doc.setFillColor(palette.teal600[0], palette.teal600[1], palette.teal600[2]);
+    doc.rect(0, 0, pageWidth, 42, 'F');
+    doc.setFillColor(palette.teal500[0], palette.teal500[1], palette.teal500[2]);
+    doc.rect(0, 0, 78, 42, 'F');
+    doc.setFillColor(palette.teal700[0], palette.teal700[1], palette.teal700[2]);
+    doc.rect(0, 36, pageWidth, 6, 'F');
+    doc.setTextColor(palette.white[0], palette.white[1], palette.white[2]);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(18);
+    doc.text('Skin Age Insights Report', 14, 16);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+    doc.text('Personalized dermatology intelligence and action plan', 14, 23);
+    doc.text(`Generated on ${now.toLocaleString()}`, 14, 30);
+    doc.setFillColor(palette.white[0], palette.white[1], palette.white[2]);
+    doc.roundedRect(136, 8, 58, 18, 3, 3, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+    doc.setTextColor(palette.teal700[0], palette.teal700[1], palette.teal700[2]);
+    doc.text('Premium Skin Intelligence', 140, 14);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+    doc.setTextColor(palette.slate700[0], palette.slate700[1], palette.slate700[2]);
+    doc.text(`Risk: ${riskLevel}`, 140, 18.5);
+    doc.text(`Score: ${fmt(score, '/100')}`, 168, 18.5);
+};
+
+export const drawKPIs = (doc: jsPDF, palette: any, score: number, realAge: number, skinAge: number, delta: number, riskLevel: string, metricCard: any) => {
+    const scorePercent = Math.max(0, Math.min(100, score ?? 0));
+    const scoreColor = getScoreColor(scorePercent, palette);
+    metricCard(14, 'Skin Age Score', fmt(score, '/100'), scoreColor);
+    metricCard(60, 'User Age', fmt(realAge, ' yrs'), palette.teal500);
+    metricCard(106, 'Skin Age', fmt(skinAge, ' yrs'), palette.teal600);
+    metricCard(152, 'Age Delta', fmt(delta, ' yrs'), palette.teal700);
+    let tempY = 80;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+    doc.setTextColor(palette.slate700[0], palette.slate700[1], palette.slate700[2]);
+    doc.text(`Risk Level: ${riskLevel}`, 14, tempY);
+    doc.text(`Score Band: ${classifyScore(score)}`, 64, tempY);
+    doc.text(`Interpretation: ${classifyDelta(delta)}`, 108, tempY);
+    tempY += 4;
+    doc.setFillColor(palette.slate200[0], palette.slate200[1], palette.slate200[2]);
+    doc.roundedRect(14, tempY, 182, 5, 2, 2, 'F');
+    doc.setFillColor(scoreColor[0], scoreColor[1], scoreColor[2]);
+    doc.roundedRect(14, tempY, (182 * scorePercent) / 100, 5, 2, 2, 'F');
+};
+
+export const drawProfile = (doc: jsPDF, palette: any, userCtx: any, insight: any, sectionHeader: any, paragraph: any) => {
+    sectionHeader('User Profile', palette.teal500);
+    [
+      `User name: ${userCtx.name}`,
+      `User email: ${userCtx.email}`,
+      `Assessment date: ${insight?.latestAnalysis?.createdAt ? new Date(insight.latestAnalysis.createdAt).toLocaleString() : 'N/A'}`,
+      `Status flag: ${insight?.status || 'unknown'}`,
+    ].forEach((line) => paragraph(`- ${line}`));
+};
+
+export const drawAnalysis = (doc: jsPDF, palette: any, insight: any, analysisSummary: string, sectionHeader: any, paragraph: any) => {
+    sectionHeader('Executive Summary', palette.teal600);
+    paragraph(insight?.headline || 'No summary available.');
+    sectionHeader('Clinical Analysis', palette.teal700);
+    paragraph(analysisSummary);
+};
+
+export const drawTrends = (doc: jsPDF, palette: any, insight: any, trendSeries: any[], sectionHeader: any, paragraph: any, ensureSpace: any) => {
+    sectionHeader('Trend Intelligence', palette.teal500);
+    if (trendSeries.length === 0) {
+      paragraph('- Not enough historical data.');
+    } else {
+      const avgTrendDelta = safeNum(insight?.trend?.averageDelta);
+      const latestTrendDelta = trendSeries.length > 0 ? safeNum(trendSeries[trendSeries.length - 1]?.delta) : null;
+      const earliestTrendDelta = trendSeries.length > 0 ? safeNum(trendSeries[0]?.delta) : null;
+      const trendShift = latestTrendDelta != null && earliestTrendDelta != null ? (latestTrendDelta - earliestTrendDelta) : null;
+      [
+        `Data points: ${trendSeries.length}`,
+        `Earliest delta: ${fmt(earliestTrendDelta, ' yrs')}`,
+        `Latest delta: ${fmt(latestTrendDelta, ' yrs')}`,
+        `Average delta: ${fmt(avgTrendDelta, ' yrs')}`,
+        `Shift: ${fmt(trendShift, ' yrs')}`,
+      ].forEach((line) => paragraph(`- ${line}`));
+      ensureSpace(34);
+      doc.setDrawColor(203, 213, 225);
+      doc.rect(18, doc.internal.pageSize.getHeight() - 50, 170, 24); // Approximation for demonstration
+    }
+};
+
+export const drawActions = (doc: jsPDF, palette: any, recommendedActions: string[], sectionHeader: any, paragraph: any) => {
+    sectionHeader('Recommended Actions', palette.teal600);
+    recommendedActions.forEach((tip: string, idx: number) => paragraph(`${idx + 1}. ${tip}`));
 };
 
 export const exportInsightToExcel = async (data: any) => {

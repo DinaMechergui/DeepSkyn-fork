@@ -10,6 +10,7 @@ import { historyService } from "@/services/historyService"
 import { useGoogleAuth } from "@/hooks/useGoogleAuth"
 import { saveTwoFASession } from "@/lib/twoFASession"
 import { loginSchema } from "@/lib/schemas/auth"
+import { z } from "zod"
 import ReCAPTCHA from "react-google-recaptcha"
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api"
@@ -92,10 +93,10 @@ export default function LoginPage() {
 
     const parsed = loginSchema.safeParse({ email, password })
     if (!parsed.success) {
-      const flat = parsed.error.flatten().fieldErrors;
+      const tree = z.treeifyError(parsed.error);
       setFieldErrors({
-        email: flat.email?.[0] ?? "",
-        password: flat.password?.[0] ?? "",
+        email: tree.properties?.email?.errors?.[0] ?? "",
+        password: tree.properties?.password?.errors?.[0] ?? "",
       })
       return
     }

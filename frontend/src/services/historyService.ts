@@ -191,44 +191,15 @@ export const historyService = {
       const scoreStr = localStorage.getItem('userScore');
       const currentUserId = this.getCurrentUserId();
 
-      let score: UserScore = scoreStr ? JSON.parse(scoreStr) : {
-        userId: currentUserId,
-        totalScore: 75,
-        profileConsistency: 80,
-        securityScore: 70,
-        locationConsistency: 90,
-        deviceConsistency: 85,
-        lastUpdated: new Date().toISOString(),
-        factors: {
-          nameConsistency: 80,
-          emailConsistency: 90,
-          twoFAUsage: used2FA ? 80 : 20,
-          failedLogins: status === 'failed' ? 30 : 10,
-          unusualLocations: 5,
-          newDevices: 10,
-          bioConsistency: 0,
-        }
-      };
+      let score: UserScore = scoreStr ? JSON.parse(scoreStr) : this.createInitialScore(currentUserId, status, used2FA);
 
       // Ensure userId matches
       score.userId = currentUserId;
 
       // Utiliser les scores réels de l'IA s'ils sont fournis
       if (aiScore !== undefined) {
-        // Le score global de l'IA impacte directement la cohérence du profil
         score.profileConsistency = Math.round(aiScore * 100);
-
-        if (aiDetails) {
-          if (aiDetails.nameConsistency !== undefined) {
-            score.factors.nameConsistency = Math.round(aiDetails.nameConsistency * 100);
-          }
-          if (aiDetails.emailTrust !== undefined) {
-            score.factors.emailConsistency = Math.round(aiDetails.emailTrust * 100);
-          }
-          if (aiDetails.bioStatus !== undefined) {
-            score.factors.bioConsistency = Math.round(aiDetails.bioStatus * 100);
-          }
-        }
+        this.updateAiFactors(score, aiDetails);
       }
 
       // Mettre à jour les facteurs de sécurité
@@ -263,5 +234,33 @@ export const historyService = {
     } catch (error) {
       console.error('Error updating user score:', error);
     }
+  },
+
+  createInitialScore(userId: string, status: string, used2FA: boolean): UserScore {
+    return {
+      userId,
+      totalScore: 75,
+      profileConsistency: 80,
+      securityScore: 70,
+      locationConsistency: 90,
+      deviceConsistency: 85,
+      lastUpdated: new Date().toISOString(),
+      factors: {
+        nameConsistency: 80,
+        emailConsistency: 90,
+        twoFAUsage: used2FA ? 80 : 20,
+        failedLogins: status === 'failed' ? 30 : 10,
+        unusualLocations: 5,
+        newDevices: 10,
+        bioConsistency: 0,
+      }
+    };
+  },
+
+  updateAiFactors(score: UserScore, details: any) {
+    if (!details) return;
+    if (details.nameConsistency !== undefined) score.factors.nameConsistency = Math.round(details.nameConsistency * 100);
+    if (details.emailTrust !== undefined) score.factors.emailConsistency = Math.round(details.emailTrust * 100);
+    if (details.bioStatus !== undefined) score.factors.bioConsistency = Math.round(details.bioStatus * 100);
   }
 };

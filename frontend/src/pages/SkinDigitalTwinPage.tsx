@@ -202,306 +202,179 @@ export const DigitalTwinPage: React.FC<DigitalTwinPageProps> = ({ baseAnalysisId
         )}
 
         {/* Show options form (Pro) or upgrade prompt (Free) */}
-        {showOptions && !timeline ? (
-          isPro ? (
-            // ✅ PRO USERS: Show creation form
-            <div style={{ background: THEME.surface, borderRadius: 20, border: `1px solid ${THEME.border}`, padding: 40 }}>
-              <div style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
-                <div
-                  style={{
-                    width: 80,
-                    height: 80,
-                    background: `${THEME.primary}20`,
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 24px',
-                  }}
-                >
-                  <Sparkles size={44} color={THEME.primary} />
-                </div>
-
-                <h2 style={{ fontSize: 28, fontWeight: 800, color: THEME.textPrimary, marginBottom: 12 }}>
-                  Create Your Skin Digital Twin
-                </h2>
-
-                <p style={{ fontSize: 16, color: THEME.textSecondary, marginBottom: 32 }}>
-                  Simulate how your skin will look in 1, 3, and 6 months based on your current routine and lifestyle.
-                </p>
-
-                {/* Options */}
-                <div style={{ background: THEME.background, borderRadius: 16, padding: 24, textAlign: 'left', marginBottom: 32 }}>
-                  {/* Routine Consistency */}
-                  <div style={{ marginBottom: 24 }}>
-                    <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: THEME.textPrimary, marginBottom: 12 }}>
-                      <Settings size={16} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'middle' }} />
-                      Routine Consistency
-                    </label>
-                    <div style={{ display: 'flex', gap: 12 }}>
-                      {(['high', 'medium', 'low'] as const).map((consistency) => (
-                        <button
-                          key={consistency}
-                          onClick={() => setRoutineConsistency(consistency)}
-                          style={{
-                            flex: 1,
-                            padding: 12,
-                            borderRadius: 8,
-                            border: `2px solid ${routineConsistency === consistency ? THEME.primary : THEME.border}`,
-                            background: routineConsistency === consistency ? `${THEME.primary}10` : THEME.surface,
-                            color: routineConsistency === consistency ? THEME.primary : THEME.textSecondary,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            textTransform: 'capitalize',
-                            transition: 'all 0.3s ease',
-                          }}
-                        >
-                          {consistency}
-                        </button>
-                      ))}
-                    </div>
-                    <p style={{ fontSize: 12, color: THEME.textSecondary, marginTop: 8 }}>
-                      {routineConsistency === 'high'
-                        ? 'You follow your routine religiously every day'
-                        : routineConsistency === 'medium'
-                          ? 'You follow your routine most days (5-6 days/week)'
-                          : 'You follow your routine occasionally (2-3 days/week)'}
-                    </p>
-                  </div>
-
-                  {/* Lifestyle Factors */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: THEME.textPrimary, marginBottom: 12 }}>
-                      Lifestyle Factors (Select all that apply)
-                    </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-                      {['High stress', 'Good sleep (7-9 hours)', 'Regular exercise', 'Healthy diet', 'Smoking', 'Sun exposure', 'Alcohol consumption', 'Air pollution exposure'].map((factor) => (
-                        <button
-                          key={factor}
-                          onClick={() => handleToggleLifestyleFactor(factor)}
-                          style={{
-                            padding: 10,
-                            borderRadius: 8,
-                            border: `1px solid ${lifestyleFactors.includes(factor) ? THEME.primary : THEME.border}`,
-                            background: lifestyleFactors.includes(factor) ? `${THEME.primary}10` : THEME.background,
-                            color: lifestyleFactors.includes(factor) ? THEME.primary : THEME.textSecondary,
-                            fontWeight: 500,
-                            fontSize: 13,
-                            cursor: 'pointer',
-                            transition: 'all 0.3s ease',
-                          }}
-                        >
-                          {lifestyleFactors.includes(factor) ? '✓ ' : ''}
-                          {factor}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Create Button */}
-                <button
-                  onClick={handleCreateDigitalTwin}
-                  disabled={isCreating}
-                  style={{
-                    width: '100%',
-                    padding: '16px 24px',
-                    borderRadius: 12,
-                    background: THEME.primary,
-                    color: 'white',
-                    border: 'none',
-                    fontSize: 16,
-                    fontWeight: 700,
-                    cursor: isCreating ? 'not-allowed' : 'pointer',
-                    opacity: isCreating ? 0.7 : 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                  }}
-                >
-                  {isCreating ? (
-                    <>
-                      <Loader size={18} style={{ animation: 'spin 1s linear infinite' }} />
-                      Creating your digital twin...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles size={18} />
-                      Simulate My Future Skin
-                    </>
-                  )}
-                </button>
-
-                {/* Cancel Button */}
-                <button
-                  onClick={() => setShowOptions(false)}
-                  disabled={isCreating}
-                  style={{
-                    marginTop: 12,
-                    width: '100%',
-                    padding: '12px 24px',
-                    borderRadius: 12,
-                    background: THEME.surface,
-                    color: THEME.textPrimary,
-                    border: `1px solid ${THEME.border}`,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: isCreating ? 'not-allowed' : 'pointer',
-                    opacity: isCreating ? 0.7 : 1,
-                    transition: 'all 0.3s ease',
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            // 🔒 FREE USERS: Show upgrade prompt
-            <div style={{ background: 'linear-gradient(135deg, #fef2f2, #ede9fe)', borderRadius: 20, border: `1px solid ${THEME.border}`, padding: 40 }}>
-              <div style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
-                <div
-                  style={{
-                    width: 80,
-                    height: 80,
-                    background: '#ec489920',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 24px',
-                  }}
-                >
-                  <Lock size={44} color="#ec4899" />
-                </div>
-
-                <h2 style={{ fontSize: 28, fontWeight: 800, color: THEME.textPrimary, marginBottom: 12 }}>
-                  🚀 Unlock Advanced Skin Simulation
-                </h2>
-
-                <p style={{ fontSize: 16, color: THEME.textSecondary, marginBottom: 32 }}>
-                  The Digital Twin feature is exclusively available for PRO members. Upgrade your plan to unlock detailed skin simulations and personalized 6-month predictions powered by AI.
-                </p>
-
-                {/* Features List */}
-                <div style={{ background: THEME.surface, borderRadius: 16, padding: 24, marginBottom: 32, textAlign: 'left' }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, color: THEME.textPrimary, marginBottom: 16 }}>
-                    ✨ What you'll get with PRO:
-                  </h3>
-                  <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none' }}>
-                    {[
-                      'Simulate skin at 1, 3, and 6 months',
-                      'AI-powered predictions based on your routine',
-                      'Personalized lifestyle recommendations',
-                      'Track your long-term skin trajectory',
-                      'Detailed improvement metrics'
-                    ].map((feature, idx) => (
-                      <li key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, fontSize: 14, color: THEME.textPrimary }}>
-                        <span style={{ color: THEME.primary, fontWeight: 'bold' }}>✓</span>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* CTA Buttons */}
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <button
-                    onClick={() => navigate('/upgrade')}
-                    style={{
-                      flex: 1,
-                      padding: '16px 24px',
-                      borderRadius: 12,
-                      background: THEME.primary,
-                      color: 'white',
-                      border: 'none',
-                      fontSize: 16,
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                    }}
-                  >
-                    Upgrade to PRO
-                  </button>
-                  <button
-                    onClick={() => setShowOptions(false)}
-                    style={{
-                      flex: 1,
-                      padding: '16px 24px',
-                      borderRadius: 12,
-                      background: THEME.surface,
-                      color: THEME.textPrimary,
-                      border: `1px solid ${THEME.border}`,
-                      fontSize: 16,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                    }}
-                  >
-                    Later
-                  </button>
-                </div>
-              </div>
-            </div>
-          )
-        ) : timeline ? (
-          <div>
-            {/* Timeline */}
-            <DigitalTwinTimeline timeline={timeline} />
-
-            {/* Overall Recommendation */}
-            {timeline && (
-              <div style={{ marginTop: 32, padding: 24, borderRadius: 20, background: 'linear-gradient(135deg, #f0fdfa, #e0f2fe)', border: `1px solid ${THEME.border}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
-                  <h3 style={{ fontSize: 18, fontWeight: 700, color: THEME.textPrimary, margin: 0 }}>
-                    💡 Your Personalized Recommendation
-                  </h3>
-                  <button
-                    onClick={isSpeakingRecommendation ? handleStopRecommendation : handleSpeakRecommendation}
-                    style={{ border: `1px solid ${THEME.border}`, background: '#ffffff', color: THEME.primary, borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                  >
-                    {isSpeakingRecommendation ? <Square size={12} /> : <Volume2 size={12} />}
-                    {isSpeakingRecommendation ? 'Arreter' : 'Ecouter'}
-                  </button>
-                </div>
-                <div style={{ fontSize: 16, color: THEME.textPrimary, lineHeight: 1.6, margin: 0 }}>
-                  {timeline.currentState && (
-                    <div style={{ marginBottom: 16 }}>
-                      {/* Dynamic recommendation based on trajectory */}
-                      Get a tailored recommendation based on your current skin state and predicted trajectory.
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Create New Simulation Button */}
-            <div style={{ marginTop: 32, textAlign: 'center' }}>
-              <button
-                onClick={() => {
-                  setShowOptions(true);
-                  setTimeline(null);
-                }}
-                style={{
-                  padding: '12px 24px',
-                  borderRadius: 12,
-                  background: THEME.surface,
-                  border: `1px solid ${THEME.border}`,
-                  color: THEME.textPrimary,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                }}
-              >
-                Create New Simulation
-              </button>
-            </div>
-          </div>
-        ) : null}
+        {(() => {
+          if (showOptions && !timeline) {
+            if (isPro) {
+              return (
+                <OptionsForm
+                  isCreating={isCreating}
+                  routineConsistency={routineConsistency}
+                  lifestyleFactors={lifestyleFactors}
+                  setRoutineConsistency={setRoutineConsistency}
+                  handleToggleLifestyleFactor={handleToggleLifestyleFactor}
+                  handleCreateDigitalTwin={handleCreateDigitalTwin}
+                  setShowOptions={setShowOptions}
+                />
+              );
+            }
+            return <UpgradePrompt navigate={navigate} setShowOptions={setShowOptions} />;
+          }
+          if (timeline) {
+            return (
+              <SimulationResults
+                timeline={timeline}
+                isSpeakingRecommendation={isSpeakingRecommendation}
+                handleStopRecommendation={handleStopRecommendation}
+                handleSpeakRecommendation={handleSpeakRecommendation}
+                setShowOptions={setShowOptions}
+                setTimeline={setTimeline}
+              />
+            );
+          }
+          return null;
+        })()}
       </main>
     </div>
   );
 };
+
+/* ── Sub-components to reduce main component complexity ── */
+
+const OptionsForm: React.FC<any> = ({
+  isCreating,
+  routineConsistency,
+  lifestyleFactors,
+  setRoutineConsistency,
+  handleToggleLifestyleFactor,
+  handleCreateDigitalTwin,
+  setShowOptions
+}) => (
+  <div style={{ background: THEME.surface, borderRadius: 20, border: `1px solid ${THEME.border}`, padding: 40 }}>
+    <div style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
+      <div style={{ width: 80, height: 80, background: `${THEME.primary}20`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+        <Sparkles size={44} color={THEME.primary} />
+      </div>
+      <h2 style={{ fontSize: 28, fontWeight: 800, color: THEME.textPrimary, marginBottom: 12 }}>Create Your Skin Digital Twin</h2>
+      <p style={{ fontSize: 16, color: THEME.textSecondary, marginBottom: 32 }}>Simulate how your skin will look in 1, 3, and 6 months based on your current routine and lifestyle.</p>
+      <div style={{ background: THEME.background, borderRadius: 16, padding: 24, textAlign: 'left', marginBottom: 32 }}>
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: THEME.textPrimary, marginBottom: 12 }}>
+            <Settings size={16} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'middle' }} />
+            Routine Consistency
+          </label>
+          <div style={{ display: 'flex', gap: 12 }}>
+            {(['high', 'medium', 'low'] as const).map((consistency) => (
+              <button
+                key={consistency}
+                onClick={() => setRoutineConsistency(consistency)}
+                style={{
+                  flex: 1, padding: 12, borderRadius: 8,
+                  border: `2px solid ${routineConsistency === consistency ? THEME.primary : THEME.border}`,
+                  background: routineConsistency === consistency ? `${THEME.primary}10` : THEME.surface,
+                  color: routineConsistency === consistency ? THEME.primary : THEME.textSecondary,
+                  fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize', transition: 'all 0.3s ease',
+                }}
+              >
+                {consistency}
+              </button>
+            ))}
+          </div>
+          <p style={{ fontSize: 12, color: THEME.textSecondary, marginTop: 8 }}>
+            {(() => {
+              if (routineConsistency === 'high') return 'You follow your routine religiously every day';
+              if (routineConsistency === 'medium') return 'You follow your routine most days (5-6 days/week)';
+              return 'You follow your routine occasionally (2-3 days/week)';
+            })()}
+          </p>
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: THEME.textPrimary, marginBottom: 12 }}>Lifestyle Factors (Select all that apply)</label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+            {['High stress', 'Good sleep (7-9 hours)', 'Regular exercise', 'Healthy diet', 'Smoking', 'Sun exposure', 'Alcohol consumption', 'Air pollution exposure'].map((factor) => (
+              <button
+                key={`opt-factor-${factor.replace(/\s+/g, '-').toLowerCase()}`}
+                onClick={() => handleToggleLifestyleFactor(factor)}
+                style={{
+                  padding: 10, borderRadius: 8,
+                  border: `1px solid ${lifestyleFactors.includes(factor) ? THEME.primary : THEME.border}`,
+                  background: lifestyleFactors.includes(factor) ? `${THEME.primary}10` : THEME.background,
+                  color: lifestyleFactors.includes(factor) ? THEME.primary : THEME.textSecondary,
+                  fontWeight: 500, fontSize: 13, cursor: 'pointer', transition: 'all 0.3s ease',
+                }}
+              >
+                {lifestyleFactors.includes(factor) ? '✓ ' : ''}{factor}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      <button
+        onClick={handleCreateDigitalTwin}
+        disabled={isCreating}
+        style={{
+          width: '100%', padding: '16px 24px', borderRadius: 12, background: THEME.primary, color: 'white', border: 'none',
+          fontSize: 16, fontWeight: 700, cursor: isCreating ? 'not-allowed' : 'pointer', opacity: isCreating ? 0.7 : 1,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        }}
+      >
+        {isCreating ? <><Loader size={18} style={{ animation: 'spin 1s linear infinite' }} />Creating...</> : <><Sparkles size={18} />Simulate My Future Skin</>}
+      </button>
+      <button onClick={() => setShowOptions(false)} disabled={isCreating} style={{ marginTop: 12, width: '100%', padding: '12px 24px', borderRadius: 12, background: THEME.surface, color: THEME.textPrimary, border: `1px solid ${THEME.border}`, fontSize: 14, fontWeight: 600, cursor: isCreating ? 'not-allowed' : 'pointer', opacity: isCreating ? 0.7 : 1, transition: 'all 0.3s ease' }}>Cancel</button>
+    </div>
+  </div>
+);
+
+const UpgradePrompt: React.FC<any> = ({ navigate, setShowOptions }) => (
+  <div style={{ background: 'linear-gradient(135deg, #fef2f2, #ede9fe)', borderRadius: 20, border: `1px solid ${THEME.border}`, padding: 40 }}>
+    <div style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
+      <div style={{ width: 80, height: 80, background: '#ec489920', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+        <Lock size={44} color="#ec4899" />
+      </div>
+      <h2 style={{ fontSize: 28, fontWeight: 800, color: THEME.textPrimary, marginBottom: 12 }}>🚀 Unlock Advanced Skin Simulation</h2>
+      <p style={{ fontSize: 16, color: THEME.textSecondary, marginBottom: 32 }}>The Digital Twin feature is exclusively available for PRO members. Upgrade your plan to unlock detailed skin simulations and personalized 6-month predictions powered by AI.</p>
+      <div style={{ background: THEME.surface, borderRadius: 16, padding: 24, marginBottom: 32, textAlign: 'left' }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, color: THEME.textPrimary, marginBottom: 16 }}>✨ What you'll get with PRO:</h3>
+        <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none' }}>
+          {['Simulate skin at 1, 3, and 6 months', 'AI-powered predictions based on your routine', 'Personalized lifestyle recommendations', 'Track your long-term skin trajectory', 'Detailed improvement metrics'].map((feature) => (
+            <li key={`upg-feature-${feature.substring(0, 10)}`} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, fontSize: 14, color: THEME.textPrimary }}>
+              <span style={{ color: THEME.primary, fontWeight: 'bold' }}>✓</span>{feature}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <button onClick={() => navigate('/upgrade')} style={{ flex: 1, padding: '16px 24px', borderRadius: 12, background: THEME.primary, color: 'white', border: 'none', fontSize: 16, fontWeight: 700, cursor: 'pointer', transition: 'all 0.3s ease' }}>Upgrade to PRO</button>
+        <button onClick={() => setShowOptions(false)} style={{ flex: 1, padding: '16px 24px', borderRadius: 12, background: THEME.surface, color: THEME.textPrimary, border: `1px solid ${THEME.border}`, fontSize: 16, fontWeight: 600, cursor: 'pointer', transition: 'all 0.3s ease' }}>Later</button>
+      </div>
+    </div>
+  </div>
+);
+
+const SimulationResults: React.FC<any> = ({ timeline, isSpeakingRecommendation, handleStopRecommendation, handleSpeakRecommendation, setShowOptions, setTimeline }) => (
+  <div>
+    <DigitalTwinTimeline timeline={timeline} />
+    {timeline && (
+      <div style={{ marginTop: 32, padding: 24, borderRadius: 20, background: 'linear-gradient(135deg, #f0fdfa, #e0f2fe)', border: `1px solid ${THEME.border}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+          <h3 style={{ fontSize: 18, fontWeight: 700, color: THEME.textPrimary, margin: 0 }}>💡 Your Personalized Recommendation</h3>
+          <button
+            onClick={isSpeakingRecommendation ? handleStopRecommendation : handleSpeakRecommendation}
+            style={{ border: `1px solid ${THEME.border}`, background: '#ffffff', color: THEME.primary, borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            {isSpeakingRecommendation ? <Square size={12} /> : <Volume2 size={12} />}
+            {isSpeakingRecommendation ? 'Arreter' : 'Ecouter'}
+          </button>
+        </div>
+        <div style={{ fontSize: 16, color: THEME.textPrimary, lineHeight: 1.6, margin: 0 }}>
+          {timeline.currentState && <div style={{ marginBottom: 16 }}>Get a tailored recommendation based on your current skin state and predicted trajectory.</div>}
+        </div>
+      </div>
+    )}
+    <div style={{ marginTop: 32, textAlign: 'center' }}>
+      <button onClick={() => { setShowOptions(true); setTimeline(null); }} style={{ padding: '12px 24px', borderRadius: 12, background: THEME.surface, border: `1px solid ${THEME.border}`, color: THEME.textPrimary, fontSize: 14, fontWeight: 600, cursor: 'pointer', transition: 'all 0.3s ease' }}>Create New Simulation</button>
+    </div>
+  </div>
+);
+
 
 export default DigitalTwinPage;

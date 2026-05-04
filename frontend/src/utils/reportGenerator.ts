@@ -197,96 +197,21 @@ export const generateClinicalReport = async (data: any) => {
   drawHeader(doc, plan);
 
   // --- SECTION 0: VALUE BOX ---
-  doc.setFillColor(LIGHT_TEAL);
-  doc.roundedRect(MARGIN_X, y, 170, 25, 3, 3, 'F');
-  doc.setFontSize(9);
-  doc.setTextColor(TEAL);
-  doc.setFont('helvetica', 'bold');
-  doc.text('THE VALUE OF YOUR PROFESSIONAL CLINICAL REPORT', MARGIN_X + 5, y + 8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(GRAY);
-  const proExplain = "This clinical-grade protocol is driven by DeepSkyn's AI Diagnostic Engine to ensure medical-grade efficacy and skin barrier safety.";
-  doc.text(doc.splitTextToSize(proExplain, 160), MARGIN_X + 5, y + 14);
-
-  y += 35;
+  y = drawValueBox(doc, y);
 
   // --- SECTION 1: DERMATOLOGICAL PROFILE ---
-  y = drawSectionTitle(doc, y, 'Dermatological Profile');
-  const profileData = [
-    ['Patient Name', user?.name || user?.email || 'Valued Member'],
-    ['Biological Age', analysis?.realAge || localStorage.getItem('userAge') || '—'],
-    ['AI-Estimated Skin Age', insight?.currentSkinAge || analysis?.skinAge || '—'],
-    ['Primary Skin Type', routine?.inferredSkinType || 'Normal'],
-    ['Dominant Condition', analysis?.aiRawResponse?.globalAnalysis?.dominantCondition || 'Standard'],
-  ];
-
-  autoTable(doc, {
-    startY: y,
-    head: [],
-    body: profileData,
-    theme: 'plain',
-    styles: { fontSize: 11, cellPadding: 4, textColor: GRAY },
-    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 55, textColor: SLATE } },
-    margin: { left: MARGIN_X + 5 }
-  });
-
-  y = doc.lastAutoTable.finalY + 15;
+  y = drawProfileSection(doc, y, user, insight, analysis, routine);
 
   // --- SECTION 2: CLINICAL ANALYSIS ---
-  y = drawSectionTitle(doc, y, 'Clinical Analysis Results');
   const conditionScores = getConditionScores(analysis, routine);
-  const getStatusLabel = (s: number) => {
-    if (s > 70) return 'CRITICAL';
-    if (s > 40) return 'MODERATE';
-    return 'OPTIMAL';
-  };
-
-  const analysisTable = conditionScores.map((c: any) => {
-    const score = c.score || 0;
-    const status = getStatusLabel(score);
-    return [
-      c.type.charAt(0).toUpperCase() + c.type.slice(1),
-      `${Math.round(score)}%`,
-      status,
-      c.description || 'Monitoring recommended.'
-    ];
-  });
-
-  autoTable(doc, {
-    startY: y,
-    head: [['Skin Biomarker', 'Severity', 'Status', 'Clinical Observation']],
-    body: analysisTable.length > 0 ? analysisTable : [['General Health', 'Normal', 'STABLE', 'Functional barrier.']],
-    theme: 'grid',
-    headStyles: { fillColor: TEAL, textColor: '#fff', fontStyle: 'bold' },
-    styles: { fontSize: 9, cellPadding: 5 },
-    margin: { left: MARGIN_X }
-  });
-
-  y = doc.lastAutoTable.finalY + 12;
+  y = drawAnalysisSection(doc, y, conditionScores);
 
   // --- DIAGNOSTIC CARDS ---
   y = drawSectionTitle(doc, y, 'Deep Diagnostic & Active Resolution');
   y = drawDiagnosticCards(doc, y, conditionScores);
 
   // --- SECTION 4: ROUTINE ---
-  y = drawSectionTitle(doc, y, 'Prescribed Routine Protocol');
-  const routineSteps = [
-    ... (routine?.morning || []).map((s: any) => ({ ...s, time: 'MORNING (AM)' })),
-    ... (routine?.night || []).map((s: any) => ({ ...s, time: 'EVENING (PM)' }))
-  ];
-
-  if (routineSteps.length > 0) {
-    autoTable(doc, {
-      startY: y,
-      head: [['Time', 'Step', 'Product Name', 'Instructions']],
-      body: routineSteps.map((s: any) => [s.time, s.stepName || 'Treatment', s.product?.name || 'SVR Treatment', s.instruction || 'Apply to clean skin.']),
-      theme: 'striped',
-      headStyles: { fillColor: '#f8fafc', textColor: TEAL, fontStyle: 'bold' },
-      styles: { fontSize: 8, cellPadding: 4 },
-      margin: { left: MARGIN_X }
-    });
-    y = doc.lastAutoTable.finalY + 15;
-  }
+  y = drawRoutineSection(doc, y, routine);
 
   // --- SECTION 5: ADVICE ---
   const advice = insight?.expertAdvice || [
@@ -299,4 +224,93 @@ export const generateClinicalReport = async (data: any) => {
 
   drawFooter(doc);
   doc.save(`DeepSkyn_Clinical_Report_${new Date().toISOString().substring(0, 10)}.pdf`);
+};
+
+/* ── Helpers to reduce complexity ── */
+
+const drawValueBox = (doc: any, y: number) => {
+  doc.setFillColor(LIGHT_TEAL);
+  doc.roundedRect(MARGIN_X, y, 170, 25, 3, 3, 'F');
+  doc.setFontSize(9);
+  doc.setTextColor(TEAL);
+  doc.setFont('helvetica', 'bold');
+  doc.text('THE VALUE OF YOUR PROFESSIONAL CLINICAL REPORT', MARGIN_X + 5, y + 8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(GRAY);
+  const proExplain = "This clinical-grade protocol is driven by DeepSkyn's AI Diagnostic Engine to ensure medical-grade efficacy and skin barrier safety.";
+  doc.text(doc.splitTextToSize(proExplain, 160), MARGIN_X + 5, y + 14);
+  return y + 35;
+};
+
+const drawProfileSection = (doc: any, y: number, user: any, insight: any, analysis: any, routine: any) => {
+  const newY = drawSectionTitle(doc, y, 'Dermatological Profile');
+  const profileData = [
+    ['Patient Name', user?.name || user?.email || 'Valued Member'],
+    ['Biological Age', analysis?.realAge || localStorage.getItem('userAge') || '—'],
+    ['AI-Estimated Skin Age', insight?.currentSkinAge || analysis?.skinAge || '—'],
+    ['Primary Skin Type', routine?.inferredSkinType || 'Normal'],
+    ['Dominant Condition', analysis?.aiRawResponse?.globalAnalysis?.dominantCondition || 'Standard'],
+  ];
+
+  autoTable(doc, {
+    startY: newY,
+    head: [],
+    body: profileData,
+    theme: 'plain',
+    styles: { fontSize: 11, cellPadding: 4, textColor: GRAY },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 55, textColor: SLATE } },
+    margin: { left: MARGIN_X + 5 }
+  });
+  return doc.lastAutoTable.finalY + 15;
+};
+
+const drawAnalysisSection = (doc: any, y: number, conditionScores: any[]) => {
+  const newY = drawSectionTitle(doc, y, 'Clinical Analysis Results');
+  const getStatusLabel = (s: number) => {
+    if (s > 70) return 'CRITICAL';
+    if (s > 40) return 'MODERATE';
+    return 'OPTIMAL';
+  };
+
+  const analysisTable = conditionScores.map((c: any) => {
+    const score = c.score || 0;
+    return [
+      c.type.charAt(0).toUpperCase() + c.type.slice(1),
+      `${Math.round(score)}%`,
+      getStatusLabel(score),
+      c.description || 'Monitoring recommended.'
+    ];
+  });
+
+  autoTable(doc, {
+    startY: newY,
+    head: [['Skin Biomarker', 'Severity', 'Status', 'Clinical Observation']],
+    body: analysisTable.length > 0 ? analysisTable : [['General Health', 'Normal', 'STABLE', 'Functional barrier.']],
+    theme: 'grid',
+    headStyles: { fillColor: TEAL, textColor: '#fff', fontStyle: 'bold' },
+    styles: { fontSize: 9, cellPadding: 5 },
+    margin: { left: MARGIN_X }
+  });
+  return doc.lastAutoTable.finalY + 12;
+};
+
+const drawRoutineSection = (doc: any, y: number, routine: any) => {
+  const newY = drawSectionTitle(doc, y, 'Prescribed Routine Protocol');
+  const routineSteps = [
+    ... (routine?.morning || []).map((s: any) => ({ ...s, time: 'MORNING (AM)' })),
+    ... (routine?.night || []).map((s: any) => ({ ...s, time: 'EVENING (PM)' }))
+  ];
+
+  if (routineSteps.length === 0) return newY;
+
+  autoTable(doc, {
+    startY: newY,
+    head: [['Time', 'Step', 'Product Name', 'Instructions']],
+    body: routineSteps.map((s: any) => [s.time, s.stepName || 'Treatment', s.product?.name || 'SVR Treatment', s.instruction || 'Apply to clean skin.']),
+    theme: 'striped',
+    headStyles: { fillColor: '#f8fafc', textColor: TEAL, fontStyle: 'bold' },
+    styles: { fontSize: 8, cellPadding: 4 },
+    margin: { left: MARGIN_X }
+  });
+  return doc.lastAutoTable.finalY + 15;
 };

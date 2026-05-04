@@ -35,28 +35,8 @@ class AIService {
 
     // Tenter de fetch l'image pour voir si c'est une vraie photo
     let isRealPhoto = false;
-
     if (isGooglePhoto) {
-      try {
-        const response = await fetch(highResUrl, { method: 'HEAD' });
-
-        if (!response.ok || response.status === 429) {
-          // Rate limited — fallback : on assume que c'est une vraie photo car c'est un compte Google
-          console.log(`⚠️ Google CDN status ${response.status}, assuming real photo for Google account`);
-          isRealPhoto = true;
-        } else {
-          const contentLength = response.headers.get('content-length');
-          const fileSize = parseInt(contentLength || '0');
-
-          // Les avatars par défaut font souvent < 4-6KB. Les vraies photos font généralement > 8KB.
-          isRealPhoto = fileSize > 6000;
-
-          console.log(`📏 Taille image: ${fileSize} bytes → ${isRealPhoto ? 'PROBABLE PHOTO' : 'AVATAR'}`);
-        }
-      } catch (e) {
-        // Fallback si fetch bloqué (CORS) - on fait confiance à Google
-        isRealPhoto = true;
-      }
+      isRealPhoto = await this.handleGooglePhotoAnalysis(highResUrl);
     }
 
     let quality = 0.3;
@@ -199,24 +179,17 @@ class AIService {
         : nameEmailConsistency;
 
       // 3. Vérification de la BIO
-      const hasBio = bio.trim().length > 10;
-      const bioStatus = hasBio ? 1.0 : 0.0;
-      const bioPenalty = hasBio ? 0 : 0.15;
+      const { bioStatus, bioPenalty } = this.handleBioAnalysis(bio);
 
       // Critères de photo et complétude
       const hasPhoto = !!user.picture;
       const photoAnalysis = user.photoAnalysis;
       const hasFaceDetection = photoAnalysis?.hasFace || false;
       const isRealPerson = hasFaceDetection && photoQuality > 0.6;
-      const isCompleteProfile = nameParts.length >= 2 && hasPhoto && !!user.email && hasBio;
+      const isCompleteProfile = nameParts.length >= 2 && hasPhoto && !!user.email && bio.trim().length > 10;
 
       // Pondérations PLUS STRICTES
-      const weights = {
-        email: 0.25,
-        photo: 0.25,
-        nameConsistency: 0.35,
-        completeness: 0.15
-      };
+      const weights = { email: 0.25, photo: 0.25, nameConsistency: 0.35, completeness: 0.15 };
 
       let score = 0;
       score += emailTrust * weights.email;
@@ -334,6 +307,26 @@ class AIService {
     console.log(`📊 Score calculation: Photo(${photoAnalysis.quality.toFixed(2)} × ${photoWeight}) + Email(${emailAnalysis.score.toFixed(2)} × ${emailWeight}) = ${overallScore.toFixed(2)}`);
 
     return Math.min(overallScore, 1.0);
+  }
+
+  // Helpers to reduce complexity
+  private async handleGooglePhotoAnalysis(highResUrl: string): Promise<boolean> {
+    try {
+      const response = await fetch(highResUrl, { method: 'HEAD' });
+      if (!response.ok || response.status === 429) return true;
+      const fileSize = parseInt(response.headers.get('content-length') || '0');
+      return fileSize > 6000;
+    } catch (e) {
+      return true;
+    }
+  }
+
+  private handleBioAnalysis(bio: string): { bioStatus: number, bioPenalty: number } {
+    const hasBio = bio.trim().length > 10;
+    return {
+      bioStatus: hasBio ? 1.0 : 0.0,
+      bioPenalty: hasBio ? 0 : 0.15
+    };
   }
 }
 
