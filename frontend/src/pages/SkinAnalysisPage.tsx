@@ -456,7 +456,19 @@ function ProgressSection({ currentPlan, t, timelineError, timelineLoading, timel
   );
 }
 
-function PrintableReport({ result, profile, CONDITION_META, t, BLEND_LABELS, displayMetaWeighting, routineResult, routineError, currentPlan, globalScoreColor, i18n, CONDITION_DETAILS }: any) {
+function PrintableReport({ data }: { data: any }) {
+  const { result, profile, CONDITION_META, t, BLEND_LABELS, displayMetaWeighting, routineResult, routineError, currentPlan, globalScoreColor, i18n, CONDITION_DETAILS } = data;
+  
+  const getLocale = (lang: string) => {
+    if (lang === 'ar') return 'ar-SA';
+    if (lang === 'en') return 'en-US';
+    return 'fr-FR';
+  };
+
+  const currentLocale = getLocale(i18n.language);
+  const formattedDate = new Date().toLocaleDateString(currentLocale, { 
+    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+  });
   return (
     <div id="printable-report" style={{
       background: 'white', padding: '15mm', width: '100%', maxWidth: '210mm',
@@ -486,14 +498,7 @@ function PrintableReport({ result, profile, CONDITION_META, t, BLEND_LABELS, dis
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a' }}>{t('analysis.pdf.expert_report', { defaultValue: 'RAPPORT ANALYTIQUE EXPERT' })}</div>
             <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>ID: #{new Date().getTime().toString().slice(-8)}</div>
-            <div style={{ fontSize: 12, color: '#94a3b8' }}>{(() => {
-              if (i18n.language === 'ar') return 'ar-SA';
-              if (i18n.language === 'en') return 'en-US';
-              return 'fr-FR';
-            })()} {t('analysis.pdf.generated_on', { defaultValue: 'Généré le' })} {new Date().toLocaleDateString(
-              i18n.language === 'ar' ? 'ar-SA' : i18n.language === 'en' ? 'en-US' : 'fr-FR',
-              { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }
-            )}</div>
+            <div style={{ fontSize: 12, color: '#94a3b8' }}>{currentLocale} {t('analysis.pdf.generated_on', { defaultValue: 'Généré le' })} {formattedDate}</div>
           </div>
         </div>
 
@@ -607,50 +612,57 @@ function PrintableReport({ result, profile, CONDITION_META, t, BLEND_LABELS, dis
       {/* Page 2: Routine */}
       <div className="page-break" style={{ paddingTop: '10mm' }}>
         <h2 style={{ fontSize: 22, fontWeight: 900, color: '#0d9488', marginBottom: 30, textAlign: 'center', textTransform: 'uppercase' }}>{t('analysis.pdf.complete_care_strategy', { defaultValue: 'Stratégie de Soins' })}</h2>
-        {currentPlan === 'FREE' ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#64748b', border: '1px dashed #e2e8f0', borderRadius: 20, background: '#f8fafc' }}>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1e293b' }}>{t('analysis.pdf.upgrade_title')}</h3>
-            {t('analysis.pdf.pro_routine_only')}
-          </div>
-        ) : routineResult ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 35 }}>
-            <div className="no-break" style={{ width: '100%', boxSizing: 'border-box' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, padding: '10px 20px', background: '#f0f9ff', borderRadius: 14 }}>
-                <Sun size={24} color="#0369a1" /> <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0369a1', margin: 0 }}>{t('analysis.pdf.morning_routine')}</h3>
+        {(() => {
+          if (currentPlan === 'FREE') {
+            return (
+              <div style={{ padding: 40, textAlign: 'center', color: '#64748b', border: '1px dashed #e2e8f0', borderRadius: 20, background: '#f8fafc' }}>
+                <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1e293b' }}>{t('analysis.pdf.upgrade_title')}</h3>
+                {t('analysis.pdf.pro_routine_only')}
               </div>
-              {routineResult.morning.map((step: any, i: number) => (
-                <div key={step.stepName || `morning-${i}`} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', marginBottom: 10 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#0369a1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{i + 1}</div>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 800 }}>{step.stepName} — <span style={{ color: '#0369a1' }}>{step.product?.name}</span></div>
-                    <div style={{ fontSize: 12, color: '#64748b' }}>{step.instruction}</div>
+            );
+          }
+          if (routineResult) {
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 35 }}>
+                <div className="no-break" style={{ width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, padding: '10px 20px', background: '#f0f9ff', borderRadius: 14 }}>
+                    <Sun size={24} color="#0369a1" /> <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0369a1', margin: 0 }}>{t('analysis.pdf.morning_routine')}</h3>
                   </div>
+                  {routineResult.morning.map((step: any, i: number) => (
+                    <div key={step.stepName || `morning-${i}`} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', marginBottom: 10 }}>
+                      <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#0369a1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{i + 1}</div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 800 }}>{step.stepName} — <span style={{ color: '#0369a1' }}>{step.product?.name}</span></div>
+                        <div style={{ fontSize: 12, color: '#64748b' }}>{step.instruction}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <div className="no-break" style={{ width: '100%', boxSizing: 'border-box' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, padding: '10px 20px', background: '#f5f3ff', borderRadius: 14 }}>
-                <Moon size={24} color="#5b21b6" /> <h3 style={{ fontSize: 18, fontWeight: 800, color: '#5b21b6', margin: 0 }}>{t('analysis.pdf.night_routine')}</h3>
+                <div className="no-break" style={{ width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, padding: '10px 20px', background: '#f5f3ff', borderRadius: 14 }}>
+                    <Moon size={24} color="#5b21b6" /> <h3 style={{ fontSize: 18, fontWeight: 800, color: '#5b21b6', margin: 0 }}>{t('analysis.pdf.night_routine')}</h3>
+                  </div>
+                  {routineResult.night.map((step: any, i: number) => (
+                    <div key={step.stepName || `night-${i}`} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', marginBottom: 10 }}>
+                      <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#5b21b6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{i + 1}</div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 800 }}>{step.stepName} — <span style={{ color: '#5b21b6' }}>{step.product?.name}</span></div>
+                        <div style={{ fontSize: 12, color: '#64748b' }}>{step.instruction}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ padding: 25, borderRadius: 24, background: 'linear-gradient(135deg, #f0fdfa, #f0f9ff)', border: '1px solid #ccfbf1' }}>
+                  <p style={{ margin: 0, fontSize: 14, color: '#134e4a', fontStyle: 'italic' }}>"{routineResult.generalAdvice}"</p>
+                </div>
               </div>
-              {routineResult.night.map((step: any, i: number) => (
-                <div key={step.stepName || `night-${i}`} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', marginBottom: 10 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#5b21b6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{i + 1}</div>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 800 }}>{step.stepName} — <span style={{ color: '#5b21b6' }}>{step.product?.name}</span></div>
-                    <div style={{ fontSize: 12, color: '#64748b' }}>{step.instruction}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div style={{ padding: 25, borderRadius: 24, background: 'linear-gradient(135deg, #f0fdfa, #f0f9ff)', border: '1px solid #ccfbf1' }}>
-              <p style={{ margin: 0, fontSize: 14, color: '#134e4a', fontStyle: 'italic' }}>"{routineResult.generalAdvice}"</p>
-            </div>
-          </div>
-        ) : routineError ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#ef4444' }}>⚠️ {t('analysis.errors.routine_load_fail')}</div>
-        ) : (
-          <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>{t('analysis.routine_generating')}</div>
-        )}
+            );
+          }
+          if (routineError) {
+            return <div style={{ padding: 40, textAlign: 'center', color: '#ef4444' }}>⚠️ {t('analysis.errors.routine_load_fail')}</div>;
+          }
+          return <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>{t('analysis.routine_generating')}</div>;
+        })()}
       </div>
 
       <div style={{ marginTop: 40, paddingTop: 30, borderTop: '1px solid #e2e8f0', textAlign: 'center' }}>
@@ -665,38 +677,36 @@ function buildAnalysisSummary(r: GlobalScoreResult | null, t: any, CONDITION_MET
     if (!r) return '';
     const evaluated = (r.conditionScores || []).filter(c => c?.evaluated !== false && typeof c?.score === 'number');
     if (evaluated.length === 0) {
-        return t('analysis.no_data_provided_desc', { defaultValue: "Aucune condition n'a pu être évaluée. Ajoutez un selfie (recommandé) ou renseignez vos niveaux (acné, pores, rougeurs, hydratation, rides) pour obtenir un diagnostic fiable et des solutions adaptées." });
+        return t('analysis.no_data_provided_desc', { defaultValue: "Aucune condition n'a pu être évaluée." });
     }
 
     const sorted = [...evaluated].sort((a, b) => (a.score ?? 0) - (b.score ?? 0));
     const allProblems = sorted.map(c => CONDITION_META[c.type]?.label || c.type);
+    
     const userDeclaredNotDetected = (r.conditionScores || [])
-        .filter(c =>
-            c?.evaluated === false &&
-            typeof c?.notEvaluatedReason === 'string' &&
-            c.notEvaluatedReason.toLowerCase().includes('declare'),
-        )
+        .filter(c => c?.evaluated === false && c.notEvaluatedReason?.toLowerCase().includes('declare'))
         .map(c => CONDITION_META[c.type]?.label || c.type);
-    const score = typeof r.globalScore === 'number' ? Math.round(r.globalScore) : null;
 
-    const solutions: string[] = [];
-    const addIfPresent = (condType: string, text: string) => {
-        if (evaluated.some(c => c.type === condType)) solutions.push(text);
-    };
-    addIfPresent('Acne', t('analysis.summary_solutions.Acne', { defaultValue: "Acné : routine douce + actifs ciblés (BHA/azélaïque) progressivement, sans sur-nettoyer." }));
-    addIfPresent('Blackheads', t('analysis.summary_solutions.Blackheads', { defaultValue: "Points noirs : exfoliation chimique régulière (BHA) et hydratation légère pour éviter l'effet rebond." }));
-    addIfPresent('Enlarged-Pores', t('analysis.summary_solutions.Enlarged-Pores', { defaultValue: "Pores : niacinamide + contrôle du sébum, et protection solaire quotidienne pour préserver la texture." }));
-    addIfPresent('Skin Redness', t('analysis.summary_solutions.Skin Redness', { defaultValue: "Rougeurs : apaiser la barrière cutanée, éviter les irritants et privilégier des formules sans parfum." }));
-    addIfPresent('Hydration', t('analysis.summary_solutions.Hydration', { defaultValue: "Hydratation : renforcer la barrière (humectants + émollients) et limiter les exfoliants trop fréquents." }));
-    addIfPresent('Wrinkles', t('analysis.summary_solutions.Wrinkles', { defaultValue: "Rides : SPF quotidien + actifs anti-âge introduits progressivement (rétinoïde/peptides)." }));
+    const score = typeof r.globalScore === 'number' ? Math.round(r.globalScore) : null;
+    const solutions = getSolutionTexts(evaluated, t);
 
     const header = score !== null ? `${t('analysis.global_score_estimated') || 'Score global estimé'} : ${score}/100.` : `${t('analysis.summary_header_done') || 'Analyse réalisée.'}`;
     const focus = allProblems.length ? `${t('analysis.conditions_analyzed_label') || 'Conditions analysées'} : ${allProblems.join(', ')}.` : '';
-    const mismatch = userDeclaredNotDetected.length
-        ? `${t('analysis.declared_not_detected_label') || 'Déclarées mais non détectées visuellement'} : ${userDeclaredNotDetected.join(', ')}.`
-        : '';
+    const mismatch = userDeclaredNotDetected.length ? `${t('analysis.declared_not_detected_label') || 'Déclarées mais non détectées visuellement'} : ${userDeclaredNotDetected.join(', ')}.` : '';
     const plan = solutions.length ? `${t('analysis.recommended_plan_label') || 'Plan recommandé'} : ${solutions.join(' ')}` : '';
+    
     return `${header} ${focus} ${mismatch} ${plan}`.trim();
+}
+
+function getSolutionTexts(evaluated: any[], t: any): string[] {
+    const solutions: string[] = [];
+    const conditionTypes = ['Acne', 'Blackheads', 'Enlarged-Pores', 'Skin Redness', 'Hydration', 'Wrinkles'];
+    conditionTypes.forEach(type => {
+        if (evaluated.some(c => c.type === type)) {
+            solutions.push(t(`analysis.summary_solutions.${type}`));
+        }
+    });
+    return solutions;
 }
 
 /* ──────────────────────── Main Page ──────────────────────────── */
@@ -1310,20 +1320,10 @@ export default function SkinAnalysisPage() {
 
             {/* ──── PRINTABLE REPORT TEMPLATE ──── */}
             {result && (
-              <PrintableReport
-                result={result}
-                profile={profile}
-                CONDITION_META={CONDITION_META}
-                t={t}
-                BLEND_LABELS={BLEND_LABELS}
-                displayMetaWeighting={displayMetaWeighting}
-                routineResult={routineResult}
-                routineError={routineError}
-                currentPlan={currentPlan}
-                globalScoreColor={globalScoreColor}
-                i18n={i18n}
-                CONDITION_DETAILS={CONDITION_DETAILS}
-              />
+              <PrintableReport data={{
+                result, profile, CONDITION_META, t, BLEND_LABELS, displayMetaWeighting,
+                routineResult, routineError, currentPlan, globalScoreColor, i18n, CONDITION_DETAILS
+              }} />
             )}
         </div>
     );

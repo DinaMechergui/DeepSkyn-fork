@@ -149,7 +149,7 @@ export const exportInsightToPdf = (data: any) => {
     drawCover(doc, pageWidth, palette, riskLevel, score, now);
     y = 50;
 
-    drawKPIs(doc, palette, score, realAge, skinAge, delta, riskLevel, metricCard);
+    drawKPIs(doc, palette, { score, realAge, skinAge, delta }, riskLevel, metricCard);
     y += 45;
 
     drawProfile(doc, palette, userCtx, insight, sectionHeader, paragraph);
@@ -209,7 +209,8 @@ export const drawCover = (doc: jsPDF, pageWidth: number, palette: any, riskLevel
     doc.text(`Score: ${fmt(score, '/100')}`, 168, 18.5);
 };
 
-export const drawKPIs = (doc: jsPDF, palette: any, score: number, realAge: number, skinAge: number, delta: number, riskLevel: string, metricCard: any) => {
+export const drawKPIs = (doc: jsPDF, palette: any, metrics: { score: number, realAge: number, skinAge: number, delta: number }, riskLevel: string, metricCard: any) => {
+    const { score, realAge, skinAge, delta } = metrics;
     const scorePercent = Math.max(0, Math.min(100, score ?? 0));
     const scoreColor = getScoreColor(scorePercent, palette);
     metricCard(14, 'Skin Age Score', fmt(score, '/100'), scoreColor);

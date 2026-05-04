@@ -257,55 +257,17 @@ const OptionsForm: React.FC<any> = ({
       <h2 style={{ fontSize: 28, fontWeight: 800, color: THEME.textPrimary, marginBottom: 12 }}>Create Your Skin Digital Twin</h2>
       <p style={{ fontSize: 16, color: THEME.textSecondary, marginBottom: 32 }}>Simulate how your skin will look in 1, 3, and 6 months based on your current routine and lifestyle.</p>
       <div style={{ background: THEME.background, borderRadius: 16, padding: 24, textAlign: 'left', marginBottom: 32 }}>
-        <div style={{ marginBottom: 24 }}>
-          <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: THEME.textPrimary, marginBottom: 12 }}>
-            <Settings size={16} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'middle' }} />
-            Routine Consistency
-          </label>
-          <div style={{ display: 'flex', gap: 12 }}>
-            {(['high', 'medium', 'low'] as const).map((consistency) => (
-              <button
-                key={consistency}
-                onClick={() => setRoutineConsistency(consistency)}
-                style={{
-                  flex: 1, padding: 12, borderRadius: 8,
-                  border: `2px solid ${routineConsistency === consistency ? THEME.primary : THEME.border}`,
-                  background: routineConsistency === consistency ? `${THEME.primary}10` : THEME.surface,
-                  color: routineConsistency === consistency ? THEME.primary : THEME.textSecondary,
-                  fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize', transition: 'all 0.3s ease',
-                }}
-              >
-                {consistency}
-              </button>
-            ))}
-          </div>
-          <p style={{ fontSize: 12, color: THEME.textSecondary, marginTop: 8 }}>
-            {(() => {
-              if (routineConsistency === 'high') return 'You follow your routine religiously every day';
-              if (routineConsistency === 'medium') return 'You follow your routine most days (5-6 days/week)';
-              return 'You follow your routine occasionally (2-3 days/week)';
-            })()}
-          </p>
+          <ConsistencySelector
+            current={routineConsistency}
+            onSelect={setRoutineConsistency}
+          />
         </div>
         <div>
           <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: THEME.textPrimary, marginBottom: 12 }}>Lifestyle Factors (Select all that apply)</label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-            {['High stress', 'Good sleep (7-9 hours)', 'Regular exercise', 'Healthy diet', 'Smoking', 'Sun exposure', 'Alcohol consumption', 'Air pollution exposure'].map((factor) => (
-              <button
-                key={`opt-factor-${factor.replace(/\s+/g, '-').toLowerCase()}`}
-                onClick={() => handleToggleLifestyleFactor(factor)}
-                style={{
-                  padding: 10, borderRadius: 8,
-                  border: `1px solid ${lifestyleFactors.includes(factor) ? THEME.primary : THEME.border}`,
-                  background: lifestyleFactors.includes(factor) ? `${THEME.primary}10` : THEME.background,
-                  color: lifestyleFactors.includes(factor) ? THEME.primary : THEME.textSecondary,
-                  fontWeight: 500, fontSize: 13, cursor: 'pointer', transition: 'all 0.3s ease',
-                }}
-              >
-                {lifestyleFactors.includes(factor) ? '✓ ' : ''}{factor}
-              </button>
-            ))}
-          </div>
+          <LifestyleSelector
+            selected={lifestyleFactors}
+            onToggle={handleToggleLifestyleFactor}
+          />
         </div>
       </div>
       <button
@@ -321,9 +283,7 @@ const OptionsForm: React.FC<any> = ({
       </button>
       <button onClick={() => setShowOptions(false)} disabled={isCreating} style={{ marginTop: 12, width: '100%', padding: '12px 24px', borderRadius: 12, background: THEME.surface, color: THEME.textPrimary, border: `1px solid ${THEME.border}`, fontSize: 14, fontWeight: 600, cursor: isCreating ? 'not-allowed' : 'pointer', opacity: isCreating ? 0.7 : 1, transition: 'all 0.3s ease' }}>Cancel</button>
     </div>
-  </div>
-);
-
+  );
 const UpgradePrompt: React.FC<any> = ({ navigate, setShowOptions }) => (
   <div style={{ background: 'linear-gradient(135deg, #fef2f2, #ede9fe)', borderRadius: 20, border: `1px solid ${THEME.border}`, padding: 40 }}>
     <div style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
@@ -373,6 +333,59 @@ const SimulationResults: React.FC<any> = ({ timeline, isSpeakingRecommendation, 
     <div style={{ marginTop: 32, textAlign: 'center' }}>
       <button onClick={() => { setShowOptions(true); setTimeline(null); }} style={{ padding: '12px 24px', borderRadius: 12, background: THEME.surface, border: `1px solid ${THEME.border}`, color: THEME.textPrimary, fontSize: 14, fontWeight: 600, cursor: 'pointer', transition: 'all 0.3s ease' }}>Create New Simulation</button>
     </div>
+  </div>
+);
+
+const ConsistencySelector: React.FC<{ current: string, onSelect: (c: any) => void }> = ({ current, onSelect }) => (
+  <div style={{ marginBottom: 24 }}>
+    <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: THEME.textPrimary, marginBottom: 12 }}>
+      <Settings size={16} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'middle' }} />
+      Routine Consistency
+    </label>
+    <div style={{ display: 'flex', gap: 12 }}>
+      {(['high', 'medium', 'low'] as const).map((consistency) => (
+        <button
+          key={consistency}
+          onClick={() => onSelect(consistency)}
+          style={{
+            flex: 1, padding: 12, borderRadius: 8,
+            border: `2px solid ${current === consistency ? THEME.primary : THEME.border}`,
+            background: current === consistency ? `${THEME.primary}10` : THEME.surface,
+            color: current === consistency ? THEME.primary : THEME.textSecondary,
+            fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize', transition: 'all 0.3s ease',
+          }}
+        >
+          {consistency}
+        </button>
+      ))}
+    </div>
+    <p style={{ fontSize: 12, color: THEME.textSecondary, marginTop: 8 }}>
+      {(() => {
+        if (current === 'high') return 'You follow your routine religiously every day';
+        if (current === 'medium') return 'You follow your routine most days (5-6 days/week)';
+        return 'You follow your routine occasionally (2-3 days/week)';
+      })()}
+    </p>
+  </div>
+);
+
+const LifestyleSelector: React.FC<{ selected: string[], onToggle: (f: string) => void }> = ({ selected, onToggle }) => (
+  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+    {['High stress', 'Good sleep (7-9 hours)', 'Regular exercise', 'Healthy diet', 'Smoking', 'Sun exposure', 'Alcohol consumption', 'Air pollution exposure'].map((factor) => (
+      <button
+        key={`opt-factor-${factor.replace(/\s+/g, '-').toLowerCase()}`}
+        onClick={() => onToggle(factor)}
+        style={{
+          padding: 10, borderRadius: 8,
+          border: `1px solid ${selected.includes(factor) ? THEME.primary : THEME.border}`,
+          background: selected.includes(factor) ? `${THEME.primary}10` : THEME.background,
+          color: selected.includes(factor) ? THEME.primary : THEME.textSecondary,
+          fontWeight: 500, fontSize: 13, cursor: 'pointer', transition: 'all 0.3s ease',
+        }}
+      >
+        {selected.includes(factor) ? '✓ ' : ''}{factor}
+      </button>
+    ))}
   </div>
 );
 

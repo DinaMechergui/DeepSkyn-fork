@@ -152,31 +152,8 @@ class AIService {
       const nameParts = name.toLowerCase().split(/\s+/).filter(p => p.length > 1);
       const emailHandle = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, ' ');
 
-      // 1. Cohérence Nom vs Email Prefix
-      let nameEmailConsistency = 0.4;
-      if (nameParts.length > 0) {
-        const matches = nameParts.filter(part => emailHandle.includes(part));
-        if (matches.length > 0) {
-          nameEmailConsistency = 0.5 + (matches.length / nameParts.length) * 0.5;
-        }
-      }
-
       // 2. Comparaison avec le nom Google
-      let nameGoogleMatch = 1.0;
-      if (user.googleName) {
-        const profileName = name.toLowerCase().trim();
-        const gName = user.googleName.toLowerCase().trim();
-
-        if (profileName !== gName) {
-          const gParts = gName.split(/\s+/);
-          const hasCommonPart = nameParts.some(p => gParts.includes(p));
-          nameGoogleMatch = hasCommonPart ? 0.5 : 0.1;
-        }
-      }
-
-      const nameConsistency = user.googleName
-        ? (nameGoogleMatch * 0.7 + nameEmailConsistency * 0.3)
-        : nameEmailConsistency;
+      const nameConsistency = this.calculateNameConsistency(user.googleName, nameParts, emailHandle);
 
       // 3. Vérification de la BIO
       const { bioStatus, bioPenalty } = this.handleBioAnalysis(bio);
@@ -327,6 +304,25 @@ class AIService {
       bioStatus: hasBio ? 1.0 : 0.0,
       bioPenalty: hasBio ? 0 : 0.15
     };
+  }
+
+  private calculateNameConsistency(googleName: string | undefined, nameParts: string[], emailHandle: string): number {
+    let nameEmailConsistency = 0.4;
+    if (nameParts.length > 0) {
+      const matches = nameParts.filter(part => emailHandle.includes(part));
+      if (matches.length > 0) {
+        nameEmailConsistency = 0.5 + (matches.length / nameParts.length) * 0.5;
+      }
+    }
+
+    if (!googleName) return nameEmailConsistency;
+
+    let nameGoogleMatch = 1.0;
+    const gParts = googleName.toLowerCase().trim().split(/\s+/);
+    const hasCommonPart = nameParts.some(p => gParts.includes(p));
+    nameGoogleMatch = hasCommonPart ? 0.5 : 0.1;
+
+    return (nameGoogleMatch * 0.7 + nameEmailConsistency * 0.3);
   }
 }
 

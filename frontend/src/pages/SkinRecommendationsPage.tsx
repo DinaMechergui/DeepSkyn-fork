@@ -65,50 +65,58 @@ export default function SkinRecommendationsPage() {
                 return;
             }
 
-            try {
-                const rawProfile = localStorage.getItem('skinAnalysisProfile');
-                if (rawProfile) {
-                    setProfile(JSON.parse(rawProfile) as UserSkinProfile);
-                    setLoading(false);
-                    return;
-                }
-
-                const rawResult = localStorage.getItem('skinAnalysisResult');
-                if (rawResult) {
-                    const result = JSON.parse(rawResult) as GlobalScoreResult;
-                    setProfile(reconstructProfileFromResults(result));
-                    setLoading(false);
-                    return;
-                }
-            } catch (e) {
-                console.error("Local storage parse error", e);
+            const stored = await fetchStoredProfile();
+            if (stored) {
+                setProfile(stored);
+                setLoading(false);
+                return;
             }
 
             if (user?.id) {
-                try {
-                    const history = await comparisonService.getUserAnalyses(1, 1);
-                    const latest = history.data?.[0];
-                    if (latest) {
-                        const detailed = await comparisonService.getAnalysis(latest.id);
-                        setProfile({
-                            skinType: 'Normal',
-                            age: detailed.realAge || detailed.skinAge || 25,
-                            gender: 'Female',
-                            concerns: [],
-                            hydrationLevel: detailed.metrics.hydration,
-                            acneLevel: detailed.metrics.acne,
-                            wrinklesDepth: detailed.metrics.wrinkles,
-                        });
-                        setLoading(false);
-                        return;
-                    }
-                } catch (err) {
-                    console.error("Failed to fetch history", err);
+                const latest = await fetchLatestProfile();
+                if (latest) {
+                    setProfile(latest);
+                    setLoading(false);
+                    return;
                 }
             }
 
-            setLoadError(t('recommendations.error_load', { defaultValue: 'Aucun profil trouvé. Veuillez lancer une analyse cutanée d\'abord.' }));
+            setLoadError(t('recommendations.error_load', { defaultValue: 'Aucun profil trouvé.' }));
             setLoading(false);
+        };
+
+        const fetchStoredProfile = async (): Promise<UserSkinProfile | null> => {
+            try {
+                const rawProfile = localStorage.getItem('skinAnalysisProfile');
+                if (rawProfile) return JSON.parse(rawProfile);
+                const rawResult = localStorage.getItem('skinAnalysisResult');
+                if (rawResult) return reconstructProfileFromResults(JSON.parse(rawResult));
+            } catch (e) {
+                console.error("Local storage error", e);
+            }
+            return null;
+        };
+
+        const fetchLatestProfile = async (): Promise<UserSkinProfile | null> => {
+            try {
+                const history = await comparisonService.getUserAnalyses(1, 1);
+                const latest = history.data?.[0];
+                if (latest) {
+                    const detailed = await comparisonService.getAnalysis(latest.id);
+                    return {
+                        skinType: 'Normal',
+                        age: detailed.realAge || detailed.skinAge || 25,
+                        gender: 'Female',
+                        concerns: [],
+                        hydrationLevel: detailed.metrics.hydration,
+                        acneLevel: detailed.metrics.acne,
+                        wrinklesDepth: detailed.metrics.wrinkles,
+                    };
+                }
+            } catch (err) {
+                console.error("Fetch history error", err);
+            }
+            return null;
         };
 
         resolveProfile();

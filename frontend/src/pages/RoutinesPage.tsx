@@ -58,7 +58,6 @@ export default function RoutinesPage() {
   const historyKey = userId ? `routine_history_${userId}` : null
   const completedKey = userId ? `routine_completed_${userId}` : null
 
-
   useEffect(() => {
     if (!historyKey) return
     try {
@@ -85,15 +84,13 @@ export default function RoutinesPage() {
     }
   }, [completedKey])
 
-  const toggleStep = (stepId: string) => {
+  const handleToggleStep = (stepId: string) => {
     if (!completedKey) return
-    setCompletedSteps(prev => {
-      const next = prev.includes(stepId)
-        ? prev.filter(id => id !== stepId)
-        : [...prev, stepId]
-      localStorage.setItem(completedKey, JSON.stringify(next))
-      return next
-    })
+    const next = completedSteps.includes(stepId)
+      ? completedSteps.filter(id => id !== stepId)
+      : [...completedSteps, stepId]
+    setCompletedSteps(next)
+    localStorage.setItem(completedKey, JSON.stringify(next))
   }
 
   const initializeRoutine = async () => {
@@ -169,28 +166,19 @@ export default function RoutinesPage() {
     if (!userId || currentPlan !== 'PRO' || personalizing) return;
 
     const handleAnalysisCompleted = async () => {
-      // Check both sessionStorage and localStorage for analysis completion signal
       const sessionCompleted = sessionStorage.getItem('analysisCompleted');
       const storageCompleted = localStorage.getItem('analysisJustCompleted');
 
       if (sessionCompleted || storageCompleted) {
-        // Clear the signals
         sessionStorage.removeItem('analysisCompleted');
         localStorage.removeItem('analysisJustCompleted');
-
-        // Auto-update routine
         console.log('Auto-updating routine after new analysis...');
         await handleUpdateRoutine();
       }
     }
 
-    // Check on mount
     handleAnalysisCompleted();
-
-    // Set up interval to check for analysis completion every 2 seconds
     const interval = setInterval(handleAnalysisCompleted, 2000);
-
-    // Also listen for storage changes from other tabs
     window.addEventListener('storage', handleAnalysisCompleted);
 
     return () => {
@@ -207,13 +195,11 @@ export default function RoutinesPage() {
     try {
       const result = await updateRoutine({ forceRegenerate: true })
       setPersonalizationResult(result)
-
-      // Save to history
       const newHistory = [{ ...result, createdAt: new Date().toISOString() }, ...history].slice(0, 10)
       setHistory(newHistory)
       if (historyKey) localStorage.setItem(historyKey, JSON.stringify(newHistory))
     } catch (err: any) {
-      setError(err?.message || t('routines.error_update', { defaultValue: "Erreur lors de la mise à jour de la routine." }))
+      setError(err?.message || t('routines.error_update'))
     } finally {
       setPersonalizing(false)
     }
@@ -242,39 +228,9 @@ export default function RoutinesPage() {
     }
   }
 
-
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-indigo-50 py-10 relative">
-
-      {/* LOCK OVERLAY FOR FREE USERS */}
-      {currentPlan === 'FREE' && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center p-10 text-center bg-white/60 backdrop-blur-xl">
-          <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-white text-[#0d9488] shadow-2xl ring-1 ring-slate-200">
-            <Lock size={40} />
-          </div>
-          <h1 className="mb-4 text-3xl font-black text-slate-900">
-            {t('routines.pro_only.title', { defaultValue: 'Routine Personnalisée PRO' })} <span className="text-[#0d9488]">PRO</span>
-          </h1>
-          <p className="mb-8 max-w-md text-lg font-medium text-slate-500 leading-relaxed">
-            {t('routines.pro_only.desc', { defaultValue: 'Le Routine Builder intelligent, qui adapte vos soins selon vos analyses IA, est réservé aux membres PRO. Optimisez votre routine maintenant !' })}
-          </p>
-          <div className="flex gap-4">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="px-8 py-4 rounded-2xl font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all"
-            >
-              {t('routines.pro_only.back', { defaultValue: 'Retour' })}
-            </button>
-            <button
-              onClick={() => navigate('/upgrade')}
-              className="flex items-center gap-2 rounded-2xl bg-gradient-to-br from-[#0d9488] to-[#10b981] px-10 py-4 text-lg font-black text-white shadow-xl shadow-teal-500/20 hover:scale-105 transition-all"
-            >
-              <Crown size={22} /> {t('routines.pro_only.unlock', { defaultValue: 'Débloquer maintenant' })}
-            </button>
-          </div>
-        </div>
-      )}
+      {currentPlan === 'FREE' && <ProLockOverlay t={t} navigate={navigate} />}
       <div className="max-w-6xl mx-auto px-4">
         <RoutineHeader t={t} handleDownloadReport={handleDownloadReport} isGeneratingPdf={isGeneratingPdf} personalizationResult={personalizationResult} error={error} />
         <AnalyticsAdjustments t={t} personalizationResult={personalizationResult} latestAnalysis={latestAnalysis} />
@@ -299,7 +255,7 @@ export default function RoutinesPage() {
                 currentPlan={currentPlan}
                 displayMode="routine"
                 completedSteps={completedSteps}
-                onToggleStep={toggleStep}
+                onToggleStep={handleToggleStep}
                 onRoutineLoad={setFullRoutineData}
               />
             </div>
@@ -311,6 +267,30 @@ export default function RoutinesPage() {
       </div>
     </div>
   )
+}
+
+function ProLockOverlay({ t, navigate }: { t: any, navigate: any }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center p-10 text-center bg-white/60 backdrop-blur-xl">
+      <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-white text-[#0d9488] shadow-2xl ring-1 ring-slate-200">
+        <Lock size={40} />
+      </div>
+      <h1 className="mb-4 text-3xl font-black text-slate-900">
+        {t('routines.pro_only.title', { defaultValue: 'Routine Personnalisée PRO' })} <span className="text-[#0d9488]">PRO</span>
+      </h1>
+      <p className="mb-8 max-w-md text-lg font-medium text-slate-500 leading-relaxed">
+        {t('routines.pro_only.desc', { defaultValue: 'Le Routine Builder intelligent, qui adapte vos soins selon vos analyses IA, est réservé aux membres PRO.' })}
+      </p>
+      <div className="flex gap-4">
+        <button onClick={() => navigate('/dashboard')} className="px-8 py-4 rounded-2xl font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">
+          {t('routines.pro_only.back', { defaultValue: 'Retour' })}
+        </button>
+        <button onClick={() => navigate('/upgrade')} className="flex items-center gap-2 rounded-2xl bg-gradient-to-br from-[#0d9488] to-[#10b981] px-10 py-4 text-lg font-black text-white shadow-xl shadow-teal-500/20 hover:scale-105 transition-all">
+          <Crown size={22} /> {t('routines.pro_only.unlock', { defaultValue: 'Débloquer maintenant' })}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function RoutineHeader({ t, handleDownloadReport, isGeneratingPdf, personalizationResult, error }: any) {
@@ -325,29 +305,17 @@ function RoutineHeader({ t, handleDownloadReport, isGeneratingPdf, personalizati
             <Sparkles size={14} />
             {t('routines.builder', { defaultValue: 'Routine Builder' })}
           </div>
-          {error && (
-            <div className="mt-3 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-600">
-              {error}
-            </div>
-          )}
-
+          {error && <div className="mt-3 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-600">{error}</div>}
           <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900">{t('routines.title', { defaultValue: 'Ta routine AM / PM' })}</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            {t('routines.subtitle', { defaultValue: 'Coche chaque étape quand tu l’as faite. Objectif: une routine claire et régulière.' })}
-          </p>
+          <p className="mt-1 text-sm text-slate-600">{t('routines.subtitle')}</p>
         </div>
-
         <div className="flex gap-3">
           <button
             onClick={handleDownloadReport}
             disabled={isGeneratingPdf || !personalizationResult}
             className="flex items-center gap-2 rounded-2xl border border-teal-200 bg-white px-5 py-3 text-sm font-bold text-teal-700 shadow-sm hover:bg-teal-50 disabled:opacity-50 transition-all"
           >
-            {isGeneratingPdf ? (
-              <RefreshCw size={18} className="animate-spin" />
-            ) : (
-              <FileText size={18} />
-            )}
+            {isGeneratingPdf ? <RefreshCw size={18} className="animate-spin" /> : <FileText size={18} />}
             {t('routines.pdf', { defaultValue: 'Rapport PDF' })}
           </button>
         </div>
@@ -369,7 +337,6 @@ function AnalyticsAdjustments({ t, personalizationResult, latestAnalysis }: any)
               {t('routines.skin', { defaultValue: 'Peau' })} {personalizationResult?.inferredSkinType || latestAnalysis?.aiRawResponse?.globalAnalysis?.dominantCondition || '...'}
             </span>
           </div>
-
           {personalizationResult?.trends && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <TrendCard label="hydration" detail={personalizationResult?.trends.hydration} />
