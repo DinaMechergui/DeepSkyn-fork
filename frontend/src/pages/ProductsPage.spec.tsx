@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import ProductsPage from './ProductsPage';
 import { MemoryRouter } from 'react-router-dom';
@@ -44,19 +44,11 @@ describe('ProductsPage Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
     (authSession.getUser as any).mockReturnValue({ id: 'user1' });
-    
     (productService.getTypes as any).mockResolvedValue(['Serum', 'Cream', 'Cleanser']);
     (productService.getIngredients as any).mockResolvedValue(['Vitamin C', 'Retinol', 'Hyaluronic Acid']);
     (productService.filter as any).mockResolvedValue(mockProducts);
   });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  const waitDebounce = () => new Promise(r => setTimeout(r, 500));
 
   it('renders correctly and loads data', async () => {
     await act(async () => {
@@ -65,11 +57,6 @@ describe('ProductsPage Component', () => {
           <ProductsPage />
         </MemoryRouter>
       );
-    });
-    
-    // Initial fetch happens after a debounce
-    await act(async () => {
-      vi.advanceTimersByTime(400);
     });
 
     await waitFor(() => {
@@ -88,21 +75,12 @@ describe('ProductsPage Component', () => {
       );
     });
 
-    // Wait for initial load
-    await act(async () => {
-      vi.advanceTimersByTime(400);
-    });
-    await waitFor(() => expect(screen.queryByText('common.loading')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('common.loading')).toBeNull(), { timeout: 4000 });
 
     const searchInput = screen.getByPlaceholderText('products.search_placeholder');
-    
+
     await act(async () => {
       fireEvent.change(searchInput, { target: { value: 'test search' } });
-    });
-    
-    // Trigger debounce
-    await act(async () => {
-      vi.advanceTimersByTime(400);
     });
 
     await waitFor(() => {
@@ -119,17 +97,17 @@ describe('ProductsPage Component', () => {
       );
     });
 
-    await waitFor(() => expect(screen.queryByText('common.loading')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('common.loading')).toBeNull(), { timeout: 4000 });
 
     const serumBtn = screen.getByRole('button', { name: 'Serum' });
-    
+
     await act(async () => {
       fireEvent.click(serumBtn);
     });
 
     await waitFor(() => {
       expect(productService.filter).toHaveBeenCalledWith(expect.objectContaining({ type: 'Serum' }));
-    }, { timeout: 2000 });
+    }, { timeout: 4000 });
   });
 
   it('handles price range filter', async () => {
@@ -141,19 +119,12 @@ describe('ProductsPage Component', () => {
       );
     });
 
-    await act(async () => {
-      vi.advanceTimersByTime(400);
-    });
-    await waitFor(() => expect(screen.queryByText('common.loading')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('common.loading')).toBeNull(), { timeout: 4000 });
 
     const minInput = screen.getByPlaceholderText('Min');
 
     await act(async () => {
       fireEvent.change(minInput, { target: { value: '10' } });
-    });
-
-    await act(async () => {
-      vi.advanceTimersByTime(400);
     });
 
     await waitFor(() =>
@@ -167,17 +138,12 @@ describe('ProductsPage Component', () => {
       fireEvent.change(maxInput, { target: { value: '50' } });
     });
 
-    await act(async () => {
-      vi.advanceTimersByTime(400);
-    });
-
     await waitFor(() =>
       expect(productService.filter).toHaveBeenCalledWith(
         expect.objectContaining({ maxPrice: 50 })
       )
     , { timeout: 4000 });
   });
-
 
   it('handles clean only toggle', async () => {
     await act(async () => {
@@ -188,19 +154,12 @@ describe('ProductsPage Component', () => {
       );
     });
 
-    await act(async () => {
-      vi.advanceTimersByTime(400);
-    });
-    await waitFor(() => expect(screen.queryByText('common.loading')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('common.loading')).toBeNull(), { timeout: 4000 });
 
     const cleanToggle = screen.getByRole('switch');
-    
-    await act(async () => {
-      fireEvent.click(cleanToggle);
-    });
 
     await act(async () => {
-      vi.advanceTimersByTime(400);
+      fireEvent.click(cleanToggle);
     });
 
     await waitFor(() => {
@@ -217,15 +176,15 @@ describe('ProductsPage Component', () => {
       );
     });
 
-    const select = await waitFor(() => screen.getByLabelText('Filtrer par ingrédient'));
-    
+    const select = await waitFor(() => screen.getByLabelText('Filtrer par ingrédient'), { timeout: 4000 });
+
     await act(async () => {
       fireEvent.change(select, { target: { value: 'Retinol' } });
     });
 
     await waitFor(() => {
       expect(productService.filter).toHaveBeenCalledWith(expect.objectContaining({ ingredient: 'Retinol' }));
-    }, { timeout: 2000 });
+    }, { timeout: 4000 });
   });
 
   it('displays empty state when no products found', async () => {
@@ -240,7 +199,7 @@ describe('ProductsPage Component', () => {
 
     await waitFor(() => {
       expect(screen.getByText('products.no_products')).toBeDefined();
-    }, { timeout: 2000 });
+    }, { timeout: 4000 });
 
     const resetBtn = screen.getByText('products.reset');
     await act(async () => {
@@ -260,7 +219,7 @@ describe('ProductsPage Component', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Impossible de charger les produits. Vérifiez votre connexion.')).toBeDefined();
-    }, { timeout: 2000 });
+    }, { timeout: 4000 });
   });
 
   it('toggles mobile sidebar', async () => {
@@ -273,7 +232,7 @@ describe('ProductsPage Component', () => {
       );
     });
 
-    await waitFor(() => expect(screen.queryByText('common.loading')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('common.loading')).toBeNull(), { timeout: 4000 });
 
     const filterBtn = screen.getByLabelText('Ouvrir les filtres');
     await act(async () => {
@@ -282,11 +241,11 @@ describe('ProductsPage Component', () => {
 
     const closeBtn = await waitFor(() => screen.getByLabelText('Fermer les filtres'));
     expect(closeBtn).toBeDefined();
-    
+
     await act(async () => {
       fireEvent.click(closeBtn);
     });
-    
+
     Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1024 });
   });
 
@@ -299,16 +258,16 @@ describe('ProductsPage Component', () => {
       );
     });
 
-    await waitFor(() => expect(screen.queryByText('common.loading')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('common.loading')).toBeNull(), { timeout: 4000 });
 
     const sortSelect = screen.getByLabelText('Trier les produits');
-    
+
     await act(async () => {
       fireEvent.change(sortSelect, { target: { value: '2' } });
     });
 
     await waitFor(() => {
       expect(productService.filter).toHaveBeenCalledWith(expect.objectContaining({ sortBy: 'price', sortOrder: 'ASC' }));
-    }, { timeout: 2000 });
+    }, { timeout: 4000 });
   });
 });

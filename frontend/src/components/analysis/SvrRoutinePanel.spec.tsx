@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { SvrRoutinePanel } from './SvrRoutinePanel';
 import { svrRoutineService } from '../../services/svrRoutineService';
@@ -60,12 +60,7 @@ describe('SvrRoutinePanel Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
     (svrRoutineService.generateRoutine as any).mockResolvedValue(mockRoutineResult);
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   it('renders notice for FREE plan users', () => {
@@ -139,7 +134,6 @@ describe('SvrRoutinePanel Component', () => {
     const aiButton = screen.getAllByText(/Analyse IA/i)[0];
     await act(async () => {
       fireEvent.click(aiButton);
-      vi.runAllTimers();
     });
 
     await waitFor(() => {

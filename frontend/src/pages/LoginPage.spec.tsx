@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import LoginPage from './LoginPage';
@@ -53,7 +53,6 @@ global.fetch = vi.fn();
 describe('LoginPage Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
     (global.fetch as any).mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -62,10 +61,6 @@ describe('LoginPage Component', () => {
         user: { id: '1', email: 'test@test.com', role: 'USER' }
       })
     });
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   it('renders login form correctly', () => {
