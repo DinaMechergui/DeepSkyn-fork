@@ -22,6 +22,10 @@ pipeline {
             }
         }
 
+        tools {
+        nodejs 'Node18'
+    }
+
         stage('📦 Checkout') {
             steps {
                 echo "📦 Récupération du code depuis GitHub..."
