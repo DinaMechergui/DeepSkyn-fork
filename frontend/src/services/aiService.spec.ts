@@ -1,17 +1,29 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { aiService } from './aiService';
 
 describe('AIService', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   describe('analyzePhoto', () => {
     it('should return default values if no photoUrl is provided', async () => {
-      const result = await aiService.analyzePhoto();
+      const promise = aiService.analyzePhoto();
+      vi.runAllTimers();
+      const result = await promise;
       expect(result.hasFace).toBe(false);
       expect(result.quality).toBe(0.1);
     });
 
     it('should analyze a non-google photo url', async () => {
       vi.spyOn(Math, 'random').mockReturnValue(0.6);
-      const result = await aiService.analyzePhoto('https://other.com/photo.jpg');
+      const promise = aiService.analyzePhoto('https://other.com/photo.jpg');
+      vi.runAllTimers();
+      const result = await promise;
       expect(result.quality).toBe(0.6);
       expect(result.hasFace).toBe(true);
       vi.restoreAllMocks();
@@ -22,7 +34,9 @@ describe('AIService', () => {
         ok: true,
         headers: { get: () => '2000' } // 2KB < 6KB
       });
-      const result = await aiService.analyzePhoto('https://lh3.googleusercontent.com/photo');
+      const promise = aiService.analyzePhoto('https://lh3.googleusercontent.com/photo');
+      vi.runAllTimers();
+      const result = await promise;
       expect(result.quality).toBe(0.2);
     });
 
@@ -31,7 +45,9 @@ describe('AIService', () => {
         ok: true,
         headers: { get: () => null }
       });
-      const result = await aiService.analyzePhoto('https://lh3.googleusercontent.com/photo');
+      const promise = aiService.analyzePhoto('https://lh3.googleusercontent.com/photo');
+      vi.runAllTimers();
+      const result = await promise;
       expect(result.quality).toBe(0.2); // fileSize 0
     });
 
@@ -40,7 +56,9 @@ describe('AIService', () => {
         ok: true,
         headers: { get: () => '10000' }
       });
-      const result = await aiService.analyzePhoto('https://lh3.googleusercontent.com/photo');
+      const promise = aiService.analyzePhoto('https://lh3.googleusercontent.com/photo');
+      vi.runAllTimers();
+      const result = await promise;
       expect(result.quality).toBe(0.9);
     });
 
@@ -49,13 +67,17 @@ describe('AIService', () => {
         ok: false,
         status: 404
       });
-      const result = await aiService.analyzePhoto('https://lh3.googleusercontent.com/photo');
+      const promise = aiService.analyzePhoto('https://lh3.googleusercontent.com/photo');
+      vi.runAllTimers();
+      const result = await promise;
       expect(result.quality).toBe(0.9);
     });
 
     it('should handle google photo fetch error (CORS/etc)', async () => {
       global.fetch = vi.fn().mockRejectedValue(new Error('CORS'));
-      const result = await aiService.analyzePhoto('https://lh3.googleusercontent.com/photo');
+      const promise = aiService.analyzePhoto('https://lh3.googleusercontent.com/photo');
+      vi.runAllTimers();
+      const result = await promise;
       expect(result.quality).toBe(0.9); // Fallback to trust Google
     });
   });
@@ -143,14 +165,18 @@ describe('AIService', () => {
         bio: 'Professional skin enthusiast and AI developer.'
       };
 
-      const result = await aiService.verifyIdentity(user);
+      const promise = aiService.verifyIdentity(user);
+      vi.runAllTimers();
+      const result = await promise;
       expect(result.verified).toBe(true);
       expect(result.score).toBeGreaterThan(0.6);
     });
 
     it('should handle errors during verification', async () => {
       vi.spyOn(aiService, 'analyzePhoto').mockRejectedValueOnce(new Error('Test Error'));
-      const result = await aiService.verifyIdentity({ name: 'Test', email: 'test@test.com' });
+      const promise = aiService.verifyIdentity({ name: 'Test', email: 'test@test.com' });
+      vi.runAllTimers();
+      const result = await promise;
       expect(result.verified).toBe(false);
       expect(result.message).toBe('Identity verification error');
     });
@@ -159,7 +185,9 @@ describe('AIService', () => {
       vi.spyOn(aiService, 'analyzePhoto').mockResolvedValueOnce({
         quality: 0.2, hasFace: false, brightness: 0.5, clarity: 0.4
       });
-      const result = await aiService.verifyIdentity({ name: 'Test', email: 'test@gmail.com' });
+      const promise = aiService.verifyIdentity({ name: 'Test', email: 'test@gmail.com' });
+      vi.runAllTimers();
+      const result = await promise;
       expect(result.message).toBe('Photo de profil de faible qualité');
     });
 
@@ -167,7 +195,9 @@ describe('AIService', () => {
       vi.spyOn(aiService, 'analyzePhoto').mockResolvedValueOnce({
         quality: 0.8, hasFace: true, brightness: 0.8, clarity: 0.8
       });
-      const result = await aiService.verifyIdentity({ name: 'Test', email: 'test@fake.com' });
+      const promise = aiService.verifyIdentity({ name: 'Test', email: 'test@fake.com' });
+      vi.runAllTimers();
+      const result = await promise;
       expect(result.message).toBe('Adresse email suspecte');
     });
 
@@ -175,7 +205,9 @@ describe('AIService', () => {
       vi.spyOn(aiService, 'analyzePhoto').mockResolvedValueOnce({
         quality: 0.5, hasFace: true, brightness: 0.5, clarity: 0.5
       });
-      const result = await aiService.verifyIdentity({ name: 'T', email: 'test@gmail.com' });
+      const promise = aiService.verifyIdentity({ name: 'T', email: 'test@gmail.com' });
+      vi.runAllTimers();
+      const result = await promise;
       expect(result.message).toBe('Informations insuffisantes pour vérifier l\'identité');
     });
 
@@ -187,7 +219,9 @@ describe('AIService', () => {
         score: 0.65,
         bioStatus: 0.5
       });
-      const result = await aiService.verifyIdentity({ name: 'John Doe', email: 'john.doe@gmail.com' });
+      const promise = aiService.verifyIdentity({ name: 'John Doe', email: 'john.doe@gmail.com' });
+      vi.runAllTimers();
+      const result = await promise;
       expect(result.message).toBe('Identité vérifiée avec confiance moyenne');
     });
   });
@@ -229,7 +263,9 @@ describe('AIService', () => {
 
     it('should catch errors in name-photo consistency', async () => {
       // @ts-ignore
-      const score = await aiService.verifyNamePhotoConsistency(null, {});
+      const promise = aiService.verifyNamePhotoConsistency(null, {});
+      vi.runAllTimers();
+      const score = await promise;
       expect(score).toBe(0.3);
     });
   });

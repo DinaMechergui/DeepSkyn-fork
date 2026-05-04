@@ -225,7 +225,7 @@ describe('SkinAnalysisPage', () => {
     await waitFor(() => {
       expect(screen.getAllByText('82').length).toBeGreaterThan(0);
       expect(screen.getByText(/analysis.scan.done/i)).toBeDefined();
-    }, { timeout: 30000 });
+    }, { timeout: 10000 });
 
     // Check condition bars
     expect(screen.getAllByText(/analysis.conditions.Acne/i)[0]).toBeDefined();
@@ -269,7 +269,7 @@ describe('SkinAnalysisPage', () => {
       fireEvent.click(analyzeBtn);
     });
 
-    const errorMsg = await screen.findAllByText(/Connection failed/i, {}, { timeout: 30000 });
+    const errorMsg = await screen.findAllByText(/Connection failed/i, {}, { timeout: 10000 });
     expect(errorMsg.length).toBeGreaterThan(0);
   }, 30000);
 });
