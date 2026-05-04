@@ -93,35 +93,44 @@ export default function RoutinesPage() {
     localStorage.setItem(completedKey, JSON.stringify(next))
   }
 
-  const initializeRoutine = async () => {
-    try {
-      const subData = await apiGet<any>(`/subscription/${userId}`).catch(() => ({ plan: 'FREE' }));
-      setCurrentPlan(subData?.plan || 'FREE');
+  const loadSubscriptionPlan = async () => {
+    const subData = await apiGet<any>(`/subscription/${userId}`).catch(() => ({ plan: 'FREE' }));
+    setCurrentPlan(subData?.plan || 'FREE');
+  };
 
+  const buildInitialPersonalization = (routineData: any) => ({
+    message: "Routine chargée",
+    personalizationId: "initial",
+    inferredSkinType: routineData.inferredSkinType || latestAnalysis?.aiRawResponse?.globalAnalysis?.dominantCondition || "Normal",
+    analysisCount: 1,
+    trends: {
+      hydration: { current: 50, previous: 50, delta: 0, trend: 'stable' },
+      oil: { current: 50, previous: 50, delta: 0, trend: 'stable' },
+      acne: { current: 50, previous: 50, delta: 0, trend: 'stable' },
+      wrinkles: { current: 50, previous: 50, delta: 0, trend: 'stable' },
+      globalScoreTrend: 'stable'
+    },
+    adjustments: [],
+    routine: routineData.routine || routineData
+  });
+
+  const loadExistingRoutine = async () => {
+    try {
       const routineRes = await authFetch(`/routine/${userId}`, { method: "GET" });
       if (routineRes.ok) {
         const routineData = await routineRes.json();
         if (!personalizationResult && routineData) {
-          setPersonalizationResult({
-            message: "Routine chargée",
-            personalizationId: "initial",
-            inferredSkinType: routineData.inferredSkinType || latestAnalysis?.aiRawResponse?.globalAnalysis?.dominantCondition || "Normal",
-            analysisCount: 1,
-            trends: {
-              hydration: { current: 50, previous: 50, delta: 0, trend: 'stable' },
-              oil: { current: 50, previous: 50, delta: 0, trend: 'stable' },
-              acne: { current: 50, previous: 50, delta: 0, trend: 'stable' },
-              wrinkles: { current: 50, previous: 50, delta: 0, trend: 'stable' },
-              globalScoreTrend: 'stable'
-            },
-            adjustments: [],
-            routine: routineData.routine || routineData
-          } as any);
+          setPersonalizationResult(buildInitialPersonalization(routineData) as any);
         }
       }
     } catch (err) {
       console.error("Failed to initialize routine", err);
     }
+  };
+
+  const initializeRoutine = async () => {
+    await loadSubscriptionPlan();
+    await loadExistingRoutine();
   };
 
   const fetchLatestAnalysis = async () => {

@@ -456,8 +456,14 @@ function ProgressSection({ currentPlan, t, timelineError, timelineLoading, timel
   );
 }
 
+function getScoreLabel(score: number, t: any): string {
+  if (score >= 75) return t('analysis.optimal');
+  if (score >= 50) return t('analysis.moderate');
+  return t('analysis.critical');
+}
+
 function PrintableReport({ data }: { data: any }) {
-  const { result, profile, CONDITION_META, t, BLEND_LABELS, displayMetaWeighting, routineResult, routineError, currentPlan, globalScoreColor, i18n, CONDITION_DETAILS } = data;
+  const { result, profile, CONDITION_META, t, routineResult, routineError, currentPlan, globalScoreColor, i18n, CONDITION_DETAILS } = data;
   
   const getLocale = (lang: string) => {
     if (lang === 'ar') return 'ar-SA';
@@ -507,11 +513,7 @@ function PrintableReport({ data }: { data: any }) {
             <div style={{ fontSize: 13, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: 20, letterSpacing: '0.05em' }}>{t('analysis.health_score_title')}</div>
             <div style={{ fontSize: 80, fontWeight: 900, color: globalScoreColor, lineHeight: 1, letterSpacing: '-0.05em' }}>{Math.round(result.globalScore)}<span style={{ fontSize: 24, color: '#94a3b8' }}>/100</span></div>
             <div style={{ marginTop: 20, padding: '8px 20px', borderRadius: 99, display: 'inline-block', background: `${globalScoreColor}15`, color: globalScoreColor, fontSize: 16, fontWeight: 800, textTransform: 'uppercase' }}>
-            {(() => {
-              if (result.globalScore >= 75) return t('analysis.optimal');
-              if (result.globalScore >= 50) return t('analysis.moderate');
-              return t('analysis.critical');
-            })()}
+            {getScoreLabel(result.globalScore, t)}
             </div>
             <div style={{ borderTop: '1px solid #e2e8f0', marginTop: 30, paddingTop: 20, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
@@ -673,28 +675,39 @@ function PrintableReport({ data }: { data: any }) {
   );
 }
 
-function buildAnalysisSummary(r: GlobalScoreResult | null, t: any, CONDITION_META: any) {
-    if (!r) return '';
-    const evaluated = (r.conditionScores || []).filter(c => c?.evaluated !== false && typeof c?.score === 'number');
-    if (evaluated.length === 0) {
-        return t('analysis.no_data_provided_desc', { defaultValue: "Aucune condition n'a pu être évaluée." });
-    }
+function getEvaluatedConditions(r: GlobalScoreResult) {
+    return (r.conditionScores || []).filter(c => c?.evaluated !== false && typeof c?.score === 'number');
+}
 
-    const sorted = [...evaluated].sort((a, b) => (a.score ?? 0) - (b.score ?? 0));
-    const allProblems = sorted.map(c => CONDITION_META[c.type]?.label || c.type);
-    
-    const userDeclaredNotDetected = (r.conditionScores || [])
+function getDeclaredNotDetected(r: GlobalScoreResult, CONDITION_META: any): string[] {
+    return (r.conditionScores || [])
         .filter(c => c?.evaluated === false && c.notEvaluatedReason?.toLowerCase().includes('declare'))
         .map(c => CONDITION_META[c.type]?.label || c.type);
+}
 
+function buildSummaryParts(evaluated: any[], r: GlobalScoreResult, CONDITION_META: any, t: any) {
+    const sorted = [...evaluated].sort((a, b) => (a.score ?? 0) - (b.score ?? 0));
+    const allProblems = sorted.map(c => CONDITION_META[c.type]?.label || c.type);
+    const userDeclaredNotDetected = getDeclaredNotDetected(r, CONDITION_META);
     const score = typeof r.globalScore === 'number' ? Math.round(r.globalScore) : null;
     const solutions = getSolutionTexts(evaluated, t);
 
-    const header = score !== null ? `${t('analysis.global_score_estimated') || 'Score global estimé'} : ${score}/100.` : `${t('analysis.summary_header_done') || 'Analyse réalisée.'}`;
+    const header = score !== null
+        ? `${t('analysis.global_score_estimated') || 'Score global estimé'} : ${score}/100.`
+        : `${t('analysis.summary_header_done') || 'Analyse réalisée.'}`;
     const focus = allProblems.length ? `${t('analysis.conditions_analyzed_label') || 'Conditions analysées'} : ${allProblems.join(', ')}.` : '';
     const mismatch = userDeclaredNotDetected.length ? `${t('analysis.declared_not_detected_label') || 'Déclarées mais non détectées visuellement'} : ${userDeclaredNotDetected.join(', ')}.` : '';
     const plan = solutions.length ? `${t('analysis.recommended_plan_label') || 'Plan recommandé'} : ${solutions.join(' ')}` : '';
-    
+    return { header, focus, mismatch, plan };
+}
+
+function buildAnalysisSummary(r: GlobalScoreResult | null, t: any, CONDITION_META: any) {
+    if (!r) return '';
+    const evaluated = getEvaluatedConditions(r);
+    if (evaluated.length === 0) {
+        return t('analysis.no_data_provided_desc', { defaultValue: "Aucune condition n'a pu être évaluée." });
+    }
+    const { header, focus, mismatch, plan } = buildSummaryParts(evaluated, r, CONDITION_META, t);
     return `${header} ${focus} ${mismatch} ${plan}`.trim();
 }
 

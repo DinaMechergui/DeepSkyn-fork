@@ -14,6 +14,63 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+/* ── Module-level helpers (no nesting, no closure CC cost) ── */
+
+function reconstructProfileFromResults(result: GlobalScoreResult): UserSkinProfile {
+    if (result.userInputs) {
+        return {
+            ...result.userInputs as UserSkinProfile,
+            skinType: result.userInputs.skinType || 'Normal',
+            age: result.userInputs.age || 25,
+            gender: result.userInputs.gender || 'Female',
+            concerns: result.userInputs.concerns || []
+        };
+    }
+    const getScore = (type: string) => result.conditionScores?.find(c => c.type === type)?.score || 50;
+    return {
+        skinType: 'Normal',
+        age: result.skinAge || 25,
+        gender: 'Female',
+        concerns: [],
+        hydrationLevel: getScore('Hydratation'),
+        acneLevel: 100 - getScore('Acne'),
+    };
+}
+
+async function fetchStoredProfile(): Promise<UserSkinProfile | null> {
+    try {
+        const rawProfile = localStorage.getItem('skinAnalysisProfile');
+        if (rawProfile) return JSON.parse(rawProfile);
+        const rawResult = localStorage.getItem('skinAnalysisResult');
+        if (rawResult) return reconstructProfileFromResults(JSON.parse(rawResult));
+    } catch (e) {
+        console.error("Local storage error", e);
+    }
+    return null;
+}
+
+async function fetchLatestProfile(): Promise<UserSkinProfile | null> {
+    try {
+        const history = await comparisonService.getUserAnalyses(1, 1);
+        const latest = history.data?.[0];
+        if (latest) {
+            const detailed = await comparisonService.getAnalysis(latest.id);
+            return {
+                skinType: 'Normal',
+                age: detailed.realAge || detailed.skinAge || 25,
+                gender: 'Female',
+                concerns: [],
+                hydrationLevel: detailed.metrics.hydration,
+                acneLevel: detailed.metrics.acne,
+                wrinklesDepth: detailed.metrics.wrinkles,
+            };
+        }
+    } catch (err) {
+        console.error("Fetch history error", err);
+    }
+    return null;
+}
+
 export default function SkinRecommendationsPage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -24,34 +81,6 @@ export default function SkinRecommendationsPage() {
     const [profile, setProfile] = useState<UserSkinProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
-
-    /* ── Helper: Map Result to Profile ── */
-    const reconstructProfileFromResults = (result: GlobalScoreResult): UserSkinProfile => {
-        // Try to get user inputs if they were saved in the result
-        if (result.userInputs) {
-            return {
-                ...result.userInputs as UserSkinProfile,
-                skinType: result.userInputs.skinType || 'Normal',
-                age: result.userInputs.age || 25,
-                gender: result.userInputs.gender || 'Female',
-                concerns: result.userInputs.concerns || []
-            };
-        }
-
-        // Otherwise Map metrics (0-100) to profile expectations
-        const getScore = (type: string) => result.conditionScores?.find(c => c.type === type)?.score || 50;
-
-        return {
-            skinType: 'Normal', // Default fallback
-            age: result.skinAge || 25,
-            gender: 'Female',
-            concerns: [],
-            hydrationLevel: getScore('Hydratation'),
-            acneLevel: 100 - getScore('Acne'), // Score is health, profile expects severity? 
-            // In SvrRoutinePanel, if acneLevel is high, it recommends acne products.
-            // Wait, let's check SvrRoutinePanel.tsx logic for profile mapping.
-        };
-    };
 
     /* ── 1. Resolve profile: location.state → localStorage → Backend ── */
     useEffect(() => {
@@ -83,40 +112,6 @@ export default function SkinRecommendationsPage() {
 
             setLoadError(t('recommendations.error_load', { defaultValue: 'Aucun profil trouvé.' }));
             setLoading(false);
-        };
-
-        const fetchStoredProfile = async (): Promise<UserSkinProfile | null> => {
-            try {
-                const rawProfile = localStorage.getItem('skinAnalysisProfile');
-                if (rawProfile) return JSON.parse(rawProfile);
-                const rawResult = localStorage.getItem('skinAnalysisResult');
-                if (rawResult) return reconstructProfileFromResults(JSON.parse(rawResult));
-            } catch (e) {
-                console.error("Local storage error", e);
-            }
-            return null;
-        };
-
-        const fetchLatestProfile = async (): Promise<UserSkinProfile | null> => {
-            try {
-                const history = await comparisonService.getUserAnalyses(1, 1);
-                const latest = history.data?.[0];
-                if (latest) {
-                    const detailed = await comparisonService.getAnalysis(latest.id);
-                    return {
-                        skinType: 'Normal',
-                        age: detailed.realAge || detailed.skinAge || 25,
-                        gender: 'Female',
-                        concerns: [],
-                        hydrationLevel: detailed.metrics.hydration,
-                        acneLevel: detailed.metrics.acne,
-                        wrinklesDepth: detailed.metrics.wrinkles,
-                    };
-                }
-            } catch (err) {
-                console.error("Fetch history error", err);
-            }
-            return null;
         };
 
         resolveProfile();
@@ -153,7 +148,7 @@ export default function SkinRecommendationsPage() {
                             className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-teal-600 transition-colors mb-3"
                         >
                             <ArrowLeft size={14} />
-                            {t('recommendations.back_to_analysis', { defaultValue: 'Retour à l\'analyse' })}
+                            {t('recommendations.back_to_analysis', { defaultValue: "Retour à l'analyse" })}
                         </button>
                         <div className="inline-flex items-center gap-2 rounded-full border border-teal-100 bg-teal-50 px-3 py-1 text-xs font-bold uppercase tracking-widest text-teal-800">
                             <FlaskConical size={13} />
@@ -187,7 +182,7 @@ export default function SkinRecommendationsPage() {
                     </div>
                     <h2 className="text-xl font-black text-slate-800">{t('recommendations.error_title', { defaultValue: 'Analyse Requise' })}</h2>
                     <p className="text-sm text-slate-500 max-w-sm leading-relaxed">
-                        {t('recommendations.error_desc', { defaultValue: 'Pour des recommandations précises, l\'IA a besoin d\'analyser votre peau ou de consulter vos derniers résultats.' })}
+                        {t('recommendations.error_desc', { defaultValue: "Pour des recommandations précises, l'IA a besoin d'analyser votre peau ou de consulter vos derniers résultats." })}
                     </p>
                     <button
                         onClick={() => navigate('/analysis')}
