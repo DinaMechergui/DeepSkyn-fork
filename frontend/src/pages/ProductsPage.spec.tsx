@@ -119,18 +119,22 @@ describe('ProductsPage Component', () => {
   });
 
   it('handles price range filter', async () => {
-    render(
-      <MemoryRouter>
-        <ProductsPage />
-      </MemoryRouter>
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <ProductsPage />
+        </MemoryRouter>
+      );
+    });
 
     await waitFor(() => expect(screen.queryByText('common.loading')).toBeNull());
 
     const minInput = screen.getByPlaceholderText('Min');
 
-    // Change min price and verify it triggers a filter call
-    fireEvent.change(minInput, { target: { value: '10' } });
+    await act(async () => {
+      fireEvent.change(minInput, { target: { value: '10' } });
+    });
+
     await waitFor(() =>
       expect(productService.filter).toHaveBeenCalledWith(
         expect.objectContaining({ minPrice: 10 })
@@ -138,8 +142,10 @@ describe('ProductsPage Component', () => {
     , { timeout: 2000 });
 
     const maxInput = screen.getByPlaceholderText('Max');
-    // Change max price and verify it also triggers a filter call
-    fireEvent.change(maxInput, { target: { value: '50' } });
+    await act(async () => {
+      fireEvent.change(maxInput, { target: { value: '50' } });
+    });
+
     await waitFor(() =>
       expect(productService.filter).toHaveBeenCalledWith(
         expect.objectContaining({ maxPrice: 50 })

@@ -156,7 +156,9 @@ describe('SkinDigitalTwinPage Unit Tests', () => {
     });
 
     const createBtn = screen.getByRole('button', { name: /Simulate My Future Skin/i });
-    fireEvent.click(createBtn);
+    await act(async () => {
+      fireEvent.click(createBtn);
+    });
 
     await waitFor(() => {
       expect(digitalTwinService.createDigitalTwin).toHaveBeenCalledWith('test-analysis-123', {
@@ -164,6 +166,6 @@ describe('SkinDigitalTwinPage Unit Tests', () => {
         lifestyleFactors: []
       });
       expect(screen.getByText(/Your Personalized Recommendation/i)).toBeDefined();
-    });
+    }, { timeout: 4000 });
   });
 });

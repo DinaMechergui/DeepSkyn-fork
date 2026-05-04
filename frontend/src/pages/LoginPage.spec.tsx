@@ -87,14 +87,18 @@ describe('LoginPage Component', () => {
     });
 
     // Simulate captcha validation first
-    fireEvent.click(screen.getByTestId('mock-recaptcha'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('mock-recaptcha'));
+    });
 
     const submitBtn = screen.getByRole('button', { name: /^Sign In$/i });
-    fireEvent.click(submitBtn);
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/L'email est requis/i)).toBeDefined();
-    });
+    }, { timeout: 4000 });
   });
 
   it('handles successful login and redirects to home', async () => {

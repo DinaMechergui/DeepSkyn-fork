@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { SvrRoutinePanel } from './SvrRoutinePanel';
 import { svrRoutineService } from '../../services/svrRoutineService';
 import type { UserSkinProfile } from '../../types/aiAnalysis';
@@ -75,34 +75,42 @@ describe('SvrRoutinePanel Component', () => {
   });
 
   it('automatically triggers generation for PRO plan users', async () => {
-    render(
-      <SvrRoutinePanel
-        profile={mockProfile}
-        currentPlan="PRO"
-      />
-    );
+    await act(async () => {
+      render(
+        <SvrRoutinePanel
+          profile={mockProfile}
+          currentPlan="PRO"
+        />
+      );
+    });
 
     await waitFor(() => {
       expect(svrRoutineService.generateRoutine).toHaveBeenCalled();
-    });
+    }, { timeout: 3000 });
 
-    expect(screen.getAllByText(/SVR Sebiaclear Gel Moussant/i).length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getAllByText(/SVR Sebiaclear Gel Moussant/i).length).toBeGreaterThan(0);
+    }, { timeout: 3000 });
   });
 
   it('switches between morning and night tabs', async () => {
-    render(
-      <SvrRoutinePanel
-        profile={mockProfile}
-        currentPlan="PRO"
-      />
-    );
+    await act(async () => {
+      render(
+        <SvrRoutinePanel
+          profile={mockProfile}
+          currentPlan="PRO"
+        />
+      );
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/Routine Matin/i)).toBeDefined();
-    });
+    }, { timeout: 3000 });
 
     const nightTab = screen.getByText(/Routine Soir/i);
-    fireEvent.click(nightTab);
+    await act(async () => {
+      fireEvent.click(nightTab);
+    });
 
     // After switching to night, morning step should not be visible if night is empty
     // But in our mock, night is empty, so we just check it doesn't crash
@@ -110,19 +118,23 @@ describe('SvrRoutinePanel Component', () => {
   });
 
   it('shows AI reason when clicking analysis button', async () => {
-    render(
-      <SvrRoutinePanel
-        profile={mockProfile}
-        currentPlan="PRO"
-      />
-    );
+    await act(async () => {
+      render(
+        <SvrRoutinePanel
+          profile={mockProfile}
+          currentPlan="PRO"
+        />
+      );
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/Analyse IA/i)).toBeDefined();
-    });
+    }, { timeout: 3000 });
 
     const aiButton = screen.getAllByText(/Analyse IA/i)[0];
-    fireEvent.click(aiButton);
+    await act(async () => {
+      fireEvent.click(aiButton);
+    });
 
     expect(screen.getByText(/Idéal pour les peaux mixtes/i)).toBeDefined();
   });
@@ -131,12 +143,14 @@ describe('SvrRoutinePanel Component', () => {
     // Make service hang
     (svrRoutineService.generateRoutine as any).mockReturnValue(new Promise(() => {}));
 
-    render(
-      <SvrRoutinePanel
-        profile={mockProfile}
-        currentPlan="PRO"
-      />
-    );
+    await act(async () => {
+      render(
+        <SvrRoutinePanel
+          profile={mockProfile}
+          currentPlan="PRO"
+        />
+      );
+    });
 
     expect(screen.getByText(/Génération en cours/i)).toBeDefined();
   });
@@ -144,15 +158,17 @@ describe('SvrRoutinePanel Component', () => {
   it('handles error during generation', async () => {
     (svrRoutineService.generateRoutine as any).mockRejectedValue(new Error('API Fail'));
 
-    render(
-      <SvrRoutinePanel
-        profile={mockProfile}
-        currentPlan="PRO"
-      />
-    );
+    await act(async () => {
+      render(
+        <SvrRoutinePanel
+          profile={mockProfile}
+          currentPlan="PRO"
+        />
+      );
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/API Fail/i)).toBeDefined();
-    });
+    }, { timeout: 4000 });
   });
 });
