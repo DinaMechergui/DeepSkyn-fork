@@ -54,56 +54,68 @@ describe('ProductsPage Component', () => {
   const waitDebounce = () => new Promise(r => setTimeout(r, 500));
 
   it('renders correctly and loads data', async () => {
-    render(
-      <MemoryRouter>
-        <ProductsPage />
-      </MemoryRouter>
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <ProductsPage />
+        </MemoryRouter>
+      );
+    });
     
     expect(screen.getByText('common.loading')).toBeDefined();
 
-    await waitDebounce();
+    await waitFor(() => {
+      expect(screen.getByText('Product A')).toBeDefined();
+      expect(screen.getByText('Product B')).toBeDefined();
+    }, { timeout: 2000 });
 
     expect(productService.getTypes).toHaveBeenCalled();
     expect(productService.getIngredients).toHaveBeenCalled();
     expect(productService.filter).toHaveBeenCalled();
-
-    expect(screen.getByText('Product A')).toBeDefined();
-    expect(screen.getByText('Product B')).toBeDefined();
   });
 
   it('handles search input', async () => {
-    render(
-      <MemoryRouter>
-        <ProductsPage />
-      </MemoryRouter>
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <ProductsPage />
+        </MemoryRouter>
+      );
+    });
 
-    await waitDebounce();
+    await waitFor(() => expect(screen.queryByText('common.loading')).toBeNull());
 
     const searchInput = screen.getByPlaceholderText('products.search_placeholder');
     
-    fireEvent.change(searchInput, { target: { value: 'test search' } });
-    await waitDebounce();
-
-    expect(productService.filter).toHaveBeenCalledWith(expect.objectContaining({ search: 'test search' }));
+    await act(async () => {
+      fireEvent.change(searchInput, { target: { value: 'test search' } });
+    });
+    
+    await waitFor(() => {
+      expect(productService.filter).toHaveBeenCalledWith(expect.objectContaining({ search: 'test search' }));
+    }, { timeout: 2000 });
   });
 
   it('handles type filter', async () => {
-    render(
-      <MemoryRouter>
-        <ProductsPage />
-      </MemoryRouter>
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <ProductsPage />
+        </MemoryRouter>
+      );
+    });
 
-    await waitDebounce();
+    await waitFor(() => expect(screen.queryByText('common.loading')).toBeNull());
 
     const serumBtn = screen.getByRole('button', { name: 'Serum' });
     
-    fireEvent.click(serumBtn);
-    await waitDebounce();
+    await act(async () => {
+      fireEvent.click(serumBtn);
+    });
 
-    expect(productService.filter).toHaveBeenCalledWith(expect.objectContaining({ type: 'Serum' }));
+    await waitFor(() => {
+      expect(productService.filter).toHaveBeenCalledWith(expect.objectContaining({ type: 'Serum' }));
+    }, { timeout: 2000 });
   });
 
   it('handles price range filter', async () => {
@@ -137,103 +149,128 @@ describe('ProductsPage Component', () => {
 
 
   it('handles clean only toggle', async () => {
-    render(
-      <MemoryRouter>
-        <ProductsPage />
-      </MemoryRouter>
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <ProductsPage />
+        </MemoryRouter>
+      );
+    });
 
-    await waitDebounce();
+    await waitFor(() => expect(screen.queryByText('common.loading')).toBeNull());
 
     const cleanToggle = screen.getByRole('switch');
     
-    fireEvent.click(cleanToggle);
-    await waitDebounce();
+    await act(async () => {
+      fireEvent.click(cleanToggle);
+    });
 
-    expect(productService.filter).toHaveBeenCalledWith(expect.objectContaining({ isClean: true }));
+    await waitFor(() => {
+      expect(productService.filter).toHaveBeenCalledWith(expect.objectContaining({ isClean: true }));
+    }, { timeout: 2000 });
   });
 
   it('handles ingredient selection', async () => {
-    render(
-      <MemoryRouter>
-        <ProductsPage />
-      </MemoryRouter>
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <ProductsPage />
+        </MemoryRouter>
+      );
+    });
 
-    // Wait for ingredients to load (conditional render requires setIngredients to fire)
     const select = await waitFor(() => screen.getByLabelText('Filtrer par ingrédient'));
     
-    fireEvent.change(select, { target: { value: 'Retinol' } });
-    await waitDebounce();
+    await act(async () => {
+      fireEvent.change(select, { target: { value: 'Retinol' } });
+    });
 
-    expect(productService.filter).toHaveBeenCalledWith(expect.objectContaining({ ingredient: 'Retinol' }));
+    await waitFor(() => {
+      expect(productService.filter).toHaveBeenCalledWith(expect.objectContaining({ ingredient: 'Retinol' }));
+    }, { timeout: 2000 });
   });
 
   it('displays empty state when no products found', async () => {
     (productService.filter as any).mockResolvedValue([]);
-    render(
-      <MemoryRouter>
-        <ProductsPage />
-      </MemoryRouter>
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <ProductsPage />
+        </MemoryRouter>
+      );
+    });
 
-    await waitDebounce();
-
-    expect(screen.getByText('products.no_products')).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByText('products.no_products')).toBeDefined();
+    }, { timeout: 2000 });
 
     const resetBtn = screen.getByText('products.reset');
-    fireEvent.click(resetBtn);
+    await act(async () => {
+      fireEvent.click(resetBtn);
+    });
   });
 
   it('displays error state if fetch fails', async () => {
     (productService.filter as any).mockRejectedValue(new Error('Fetch failed'));
-    render(
-      <MemoryRouter>
-        <ProductsPage />
-      </MemoryRouter>
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <ProductsPage />
+        </MemoryRouter>
+      );
+    });
 
-    await waitDebounce();
-
-    expect(screen.getByText('Impossible de charger les produits. Vérifiez votre connexion.')).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByText('Impossible de charger les produits. Vérifiez votre connexion.')).toBeDefined();
+    }, { timeout: 2000 });
   });
 
   it('toggles mobile sidebar', async () => {
     Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 500 });
-    render(
-      <MemoryRouter>
-        <ProductsPage />
-      </MemoryRouter>
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <ProductsPage />
+        </MemoryRouter>
+      );
+    });
 
-    await waitDebounce();
+    await waitFor(() => expect(screen.queryByText('common.loading')).toBeNull());
 
-    // The 'Filtres' button is lg:hidden but still in DOM
     const filterBtn = screen.getByLabelText('Ouvrir les filtres');
-    fireEvent.click(filterBtn);
+    await act(async () => {
+      fireEvent.click(filterBtn);
+    });
 
-    // Mobile overlay should now show the close button
     const closeBtn = await waitFor(() => screen.getByLabelText('Fermer les filtres'));
     expect(closeBtn).toBeDefined();
-    fireEvent.click(closeBtn);
+    
+    await act(async () => {
+      fireEvent.click(closeBtn);
+    });
     
     Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1024 });
   });
 
   it('handles sorting', async () => {
-    render(
-      <MemoryRouter>
-        <ProductsPage />
-      </MemoryRouter>
-    );
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <ProductsPage />
+        </MemoryRouter>
+      );
+    });
 
-    await waitDebounce();
+    await waitFor(() => expect(screen.queryByText('common.loading')).toBeNull());
 
     const sortSelect = screen.getByLabelText('Trier les produits');
     
-    fireEvent.change(sortSelect, { target: { value: '2' } });
-    await waitDebounce();
+    await act(async () => {
+      fireEvent.change(sortSelect, { target: { value: '2' } });
+    });
 
-    expect(productService.filter).toHaveBeenCalledWith(expect.objectContaining({ sortBy: 'price', sortOrder: 'ASC' }));
+    await waitFor(() => {
+      expect(productService.filter).toHaveBeenCalledWith(expect.objectContaining({ sortBy: 'price', sortOrder: 'ASC' }));
+    }, { timeout: 2000 });
   });
 });

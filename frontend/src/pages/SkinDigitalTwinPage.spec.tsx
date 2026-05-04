@@ -90,7 +90,9 @@ describe('SkinDigitalTwinPage Unit Tests', () => {
     expect(screen.getByText(/Loading your skin future/i)).toBeDefined();
     
     // Resolve to clean up
-    resolveMock(null);
+    await act(async () => {
+      resolveMock(null);
+    });
   });
 
   it('renders creation form if PRO and no existing twin', async () => {
