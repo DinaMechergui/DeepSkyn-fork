@@ -15,7 +15,8 @@ pipeline {
         IMAGE_TAG       = "${env.BUILD_NUMBER}"
         PORT            = '3001'
         PORT            = '3001'
-        SONAR_HOST_URL  = "http://host.docker.internal:9000"
+        PORT            = '3001'
+        SONAR_HOST_URL  = "http://172.20.10.5:9000"
     }
 
     stages {
@@ -25,7 +26,7 @@ pipeline {
                 sh "cat /etc/hosts"
                 sh "getent hosts github.com || echo 'DNS : github.com inconnu'"
                 echo "--- Test de connexion SonarQube ---"
-                sh "curl -I ${SONAR_HOST_URL} --connect-timeout 5 || echo 'ERREUR : SonarQube injoignable sur ${SONAR_HOST_URL}'"
+                sh "curl -v ${SONAR_HOST_URL}/api/system/status --connect-timeout 5 || echo 'ERREUR CRITIQUE : Le Pare-feu de ton PC bloque probablement le port 9000'"
                 sh "curl -I https://140.82.121.3 --insecure --connect-timeout 5 || echo 'Réseau : IP injoignable'"
             }
         }
