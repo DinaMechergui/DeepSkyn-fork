@@ -526,6 +526,85 @@ function renderRoutineContent(routineResult: any, routineError: boolean, current
   return <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>{t('analysis.routine_generating')}</div>;
 }
 
+function DiagnosticSummary({ result, currentPlan, CONDITION_META, t }: any) {
+  const bestLabel = result.analysis.bestCondition
+    ? (CONDITION_META[result.analysis.bestCondition]?.label || result.analysis.bestCondition)
+    : 'N/A';
+  const worstLabel = result.analysis.worstCondition
+    ? (CONDITION_META[result.analysis.worstCondition]?.label || result.analysis.worstCondition)
+    : 'N/A';
+  const summaryText = currentPlan === 'FREE'
+    ? t('analysis.pdf.free_plan_message', { defaultValue: 'Le diagnostic expert est réservé aux membres PRO.' })
+    : t('analysis.pdf.pro_summary_template', { best: bestLabel, worst: worstLabel, score: Math.round(result.globalScore), defaultValue: `Score: ${Math.round(result.globalScore)}/100. Meilleure condition: ${bestLabel}. Priorité: ${worstLabel}.` });
+  const strengthLabel = result.analysis.bestCondition
+    ? bestLabel
+    : t('analysis.pdf.stable', { defaultValue: 'Stable' });
+  const priorityLabel = result.analysis.worstCondition
+    ? worstLabel
+    : t('analysis.pdf.none', { defaultValue: 'Aucun' });
+  return (
+    <div>
+      <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Activity size={18} color="#0d9488" /> Diagnostic de Synthèse
+      </h2>
+      <p style={{ fontSize: 15, color: '#334155', lineHeight: 1.8, marginBottom: 25, textAlign: 'justify' }}>{summaryText}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div style={{ padding: 20, borderRadius: 20, background: '#f0fdf4', border: '1px solid #dcfce7' }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: '#10b981', textTransform: 'uppercase', marginBottom: 8 }}>{t('analysis.pdf.strength_point', { defaultValue: 'Point de Force' })}</div>
+          <div style={{ fontSize: 16, fontWeight: 900, color: '#065f46' }}>{strengthLabel}</div>
+        </div>
+        <div style={{ padding: 20, borderRadius: 20, background: '#fef2f2', border: '1px solid #fee2e2' }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: '#ef4444', textTransform: 'uppercase', marginBottom: 8 }}>{t('analysis.pdf.priority_axis', { defaultValue: 'Axe Prioritaire' })}</div>
+          <div style={{ fontSize: 16, fontWeight: 900, color: '#991b1b' }}>{priorityLabel}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConditionCard({ c, CONDITION_META, CONDITION_DETAILS, t }: any) {
+  const meta = CONDITION_META[c.type];
+  const details = CONDITION_DETAILS[c.type];
+  const scoreValue = typeof c.score === 'number' ? c.score : 0;
+  const scoreColor = getConditionScoreColor(scoreValue);
+  const scoreDisplay = typeof c.score === 'number' ? `${Math.round(c.score)}/100` : '—';
+  return (
+    <div className="no-break" style={{ padding: 22, borderRadius: 20, border: '1px solid #f1f5f9', background: '#fff', marginBottom: 15, display: 'inline-block', width: '100%', boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: `${scoreColor}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: scoreColor }}>
+            {meta?.icon ? <meta.icon size={20} /> : <Activity size={20} />}
+          </div>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 900, color: '#1e293b' }}>{meta?.label || c.type}</div>
+            <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>{meta?.description}</div>
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 24, fontWeight: 900, color: scoreColor }}>{scoreDisplay}</div>
+          <div style={{ fontSize: 10, fontWeight: 800, color: scoreColor, textTransform: 'uppercase' }}>{t('analysis.pdf.expert_score', { defaultValue: 'Expert Score' })}</div>
+        </div>
+      </div>
+      {details && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 15, paddingTop: 15, borderTop: '1px dashed #e2e8f0' }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: 8 }}>{t('analysis.pdf.probable_causes', { defaultValue: 'Causes Probables' })}</div>
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+              {details.causes.map((cause: string) => <li key={cause} style={{ fontSize: 12, color: '#64748b', marginBottom: 4, display: 'flex', gap: 6 }}><span style={{ color: scoreColor }}>•</span> {cause}</li>)}
+            </ul>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: 8 }}>{t('analysis.pdf.care_advice', { defaultValue: 'Conseils de Soins' })}</div>
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+              {details.careRecommendations.map((reco: string) => <li key={reco} style={{ fontSize: 12, color: '#64748b', marginBottom: 4, display: 'flex', gap: 6 }}><span style={{ color: scoreColor }}>✔</span> {reco}</li>)}
+            </ul>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PrintableReport({ data }: { data: any }) {
   const { result, profile, CONDITION_META, t, routineResult, routineError, currentPlan, globalScoreColor, i18n, CONDITION_DETAILS } = data;
   const currentLocale = getReportLocale(i18n.language);
@@ -570,7 +649,7 @@ function PrintableReport({ data }: { data: any }) {
             <div style={{ fontSize: 13, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: 20, letterSpacing: '0.05em' }}>{t('analysis.health_score_title')}</div>
             <div style={{ fontSize: 80, fontWeight: 900, color: globalScoreColor, lineHeight: 1, letterSpacing: '-0.05em' }}>{Math.round(result.globalScore)}<span style={{ fontSize: 24, color: '#94a3b8' }}>/100</span></div>
             <div style={{ marginTop: 20, padding: '8px 20px', borderRadius: 99, display: 'inline-block', background: `${globalScoreColor}15`, color: globalScoreColor, fontSize: 16, fontWeight: 800, textTransform: 'uppercase' }}>
-            {getScoreLabel(result.globalScore, t)}
+              {getScoreLabel(result.globalScore, t)}
             </div>
             <div style={{ borderTop: '1px solid #e2e8f0', marginTop: 30, paddingTop: 20, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
@@ -587,79 +666,15 @@ function PrintableReport({ data }: { data: any }) {
               </div>
             </div>
           </div>
-
-          <div>
-            <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Activity size={18} color="#0d9488" /> Diagnostic de Synthèse
-            </h2>
-            <p style={{ fontSize: 15, color: '#334155', lineHeight: 1.8, marginBottom: 25, textAlign: 'justify' }}>
-              {currentPlan === 'FREE'
-                ? t('analysis.pdf.free_plan_message', { defaultValue: 'Le diagnostic expert approfondi est réservé aux membres PRO. Ce rapport interactif présente une synthèse de votre état cutané actuel basée sur notre moteur IA multi-spectre.' })
-                : t('analysis.pdf.pro_summary_template', {
-                  best: result.analysis.bestCondition ? (CONDITION_META[result.analysis.bestCondition]?.label || result.analysis.bestCondition) : 'N/A',
-                  worst: result.analysis.worstCondition ? (CONDITION_META[result.analysis.worstCondition]?.label || result.analysis.worstCondition) : 'N/A',
-                  score: Math.round(result.globalScore),
-                  defaultValue: `L'analyse automatisée de votre profil cutané met en évidence une performance optimale sur la condition ${result.analysis.bestCondition ? (CONDITION_META[result.analysis.bestCondition]?.label || result.analysis.bestCondition) : 'N/A'}. À l'inverse, l'aspect ${result.analysis.worstCondition ? (CONDITION_META[result.analysis.worstCondition]?.label || result.analysis.worstCondition) : 'N/A'} constitue votre priorité dermatologique actuelle. L'équilibre global de votre barrière est évalué à ${Math.round(result.globalScore)}/100.`
-                })
-              }
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-              <div style={{ padding: 20, borderRadius: 20, background: '#f0fdf4', border: '1px solid #dcfce7' }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: '#10b981', textTransform: 'uppercase', marginBottom: 8 }}>{t('analysis.pdf.strength_point', { defaultValue: 'Point de Force' })}</div>
-                <div style={{ fontSize: 16, fontWeight: 900, color: '#065f46' }}>{result.analysis.bestCondition ? (CONDITION_META[result.analysis.bestCondition]?.label || result.analysis.bestCondition) : t('analysis.pdf.stable', { defaultValue: 'Stable' })}</div>
-              </div>
-              <div style={{ padding: 20, borderRadius: 20, background: '#fef2f2', border: '1px solid #fee2e2' }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: '#ef4444', textTransform: 'uppercase', marginBottom: 8 }}>{t('analysis.pdf.priority_axis', { defaultValue: 'Axe Prioritaire' })}</div>
-                <div style={{ fontSize: 16, fontWeight: 900, color: '#991b1b' }}>{result.analysis.worstCondition ? (CONDITION_META[result.analysis.worstCondition]?.label || result.analysis.worstCondition) : t('analysis.pdf.none', { defaultValue: 'Aucun' })}</div>
-              </div>
-            </div>
-          </div>
+          <DiagnosticSummary result={result} currentPlan={currentPlan} CONDITION_META={CONDITION_META} t={t} />
         </div>
 
         <div style={{ marginTop: 20 }}>
           <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 20, paddingLeft: 14, borderLeft: '5px solid #0d9488' }}>{t('analysis.pdf.detailed_analysis', { defaultValue: 'Analyse Détaillée des Conditions' })}</h2>
           <div style={{ display: 'block' }}>
-            {result.conditionScores.slice(0, 4).map((c: any) => {
-              const meta = CONDITION_META[c.type];
-              const details = CONDITION_DETAILS[c.type];
-              const scoreValue = typeof c.score === 'number' ? c.score : 0;
-              const scoreColor = getConditionScoreColor(scoreValue);
-              return (
-                <div key={c.type} className="no-break" style={{ padding: 22, borderRadius: 20, border: '1px solid #f1f5f9', background: '#fff', marginBottom: 15, display: 'inline-block', width: '100%', boxSizing: 'border-box' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 10, background: `${scoreColor}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: scoreColor }}>
-                        {meta?.icon ? <meta.icon size={20} /> : <Activity size={20} />}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 16, fontWeight: 900, color: '#1e293b' }}>{meta?.label || c.type}</div>
-                        <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>{meta?.description}</div>
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 24, fontWeight: 900, color: scoreColor }}>{typeof c.score === 'number' ? `${Math.round(c.score)}/100` : '—'}</div>
-                      <div style={{ fontSize: 10, fontWeight: 800, color: scoreColor, textTransform: 'uppercase' }}>{t('analysis.pdf.expert_score', { defaultValue: 'Expert Score' })}</div>
-                    </div>
-                  </div>
-                  {details && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 15, paddingTop: 15, borderTop: '1px dashed #e2e8f0' }}>
-                      <div>
-                        <div style={{ fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: 8 }}>{t('analysis.pdf.probable_causes', { defaultValue: 'Causes Probables' })}</div>
-                        <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-                          {details.causes.map((cause: string) => <li key={cause} style={{ fontSize: 12, color: '#64748b', marginBottom: 4, display: 'flex', gap: 6 }}><span style={{ color: scoreColor }}>•</span> {cause}</li>)}
-                        </ul>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: 8 }}>{t('analysis.pdf.care_advice', { defaultValue: 'Conseils de Soins' })}</div>
-                        <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-                          {details.careRecommendations.map((reco: string) => <li key={reco} style={{ fontSize: 12, color: '#64748b', marginBottom: 4, display: 'flex', gap: 6 }}><span style={{ color: scoreColor }}>✔</span> {reco}</li>)}
-                        </ul>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {result.conditionScores.slice(0, 4).map((c: any) => (
+              <ConditionCard key={c.type} c={c} CONDITION_META={CONDITION_META} CONDITION_DETAILS={CONDITION_DETAILS} t={t} />
+            ))}
           </div>
         </div>
       </div>

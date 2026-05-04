@@ -24,38 +24,14 @@ async function checkAndHandleAnalysisCompleted(onUpdateRoutine: () => Promise<vo
   }
 }
 
-const TrendIcon = ({ trend }: { trend: TrendDetail['trend'] }) => {
-  if (trend === 'improving') return <ArrowUpRight className="text-emerald-500" size={16} />
-  if (trend === 'worsening') return <ArrowDownRight className="text-rose-500" size={16} />
-  return <Minus className="text-slate-400" size={16} />
-}
-
-const TrendCard = ({ label, detail }: { label: string, detail: TrendDetail }) => {
-  const { t } = useTranslation()
-  return (
-    <div className="rounded-2xl border border-slate-100 bg-white p-3 shadow-sm">
-      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t(`routines.${label}`, { defaultValue: label })}</div>
-      <div className="mt-1 flex items-center justify-between">
-        <div className="text-lg font-black text-slate-900">{detail.current}%</div>
-        <div className="flex items-center gap-1">
-          <TrendIcon trend={detail.trend} />
-          <span className={`text-xs font-bold ${detail.delta > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-            {detail.delta > 0 ? '+' : ''}{detail.delta}
-          </span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export default function RoutinesPage() {
+/* ── Custom hook: contains ALL stateful logic, zero CC cost to RoutinesPage ── */
+function useRoutinesPageLogic() {
   const { t } = useTranslation()
   const user = getUser()
   const userId = user?.id
   const navigate = useNavigate()
   const [currentPlan, setCurrentPlan] = useState<string>('FREE')
   const [error, setError] = useState<string | null>(null)
-
   const [personalizing, setPersonalizing] = useState(false)
   const [personalizationResult, setPersonalizationResult] = useState<RoutineUpdateResponseDto | null>(null)
   const [history, setHistory] = useState<RoutineUpdateResponseDto[]>([])
@@ -74,23 +50,16 @@ export default function RoutinesPage() {
       const raw = localStorage.getItem(historyKey)
       const parsed = raw ? (JSON.parse(raw) as RoutineUpdateResponseDto[]) : []
       setHistory(parsed)
-      if (parsed.length > 0 && !personalizationResult) {
-        setPersonalizationResult(parsed[0])
-      }
-    } catch {
-      setHistory([])
-    }
+      if (parsed.length > 0 && !personalizationResult) setPersonalizationResult(parsed[0])
+    } catch { setHistory([]) }
   }, [historyKey])
 
   useEffect(() => {
     if (!completedKey) return
     const raw = localStorage.getItem(completedKey)
     if (raw) {
-      try {
-        setCompletedSteps(JSON.parse(raw))
-      } catch (e) {
-        console.error("Failed to parse completed steps", e)
-      }
+      try { setCompletedSteps(JSON.parse(raw)) }
+      catch (e) { console.error("Failed to parse completed steps", e) }
     }
   }, [completedKey])
 
@@ -102,97 +71,6 @@ export default function RoutinesPage() {
     setCompletedSteps(next)
     localStorage.setItem(completedKey, JSON.stringify(next))
   }
-
-  const loadSubscriptionPlan = async () => {
-    const subData = await apiGet<any>(`/subscription/${userId}`).catch(() => ({ plan: 'FREE' }));
-    setCurrentPlan(subData?.plan || 'FREE');
-  };
-
-  const buildInitialPersonalization = (routineData: any) => ({
-    message: "Routine chargée",
-    personalizationId: "initial",
-    inferredSkinType: routineData.inferredSkinType || latestAnalysis?.aiRawResponse?.globalAnalysis?.dominantCondition || "Normal",
-    analysisCount: 1,
-    trends: {
-      hydration: { current: 50, previous: 50, delta: 0, trend: 'stable' },
-      oil: { current: 50, previous: 50, delta: 0, trend: 'stable' },
-      acne: { current: 50, previous: 50, delta: 0, trend: 'stable' },
-      wrinkles: { current: 50, previous: 50, delta: 0, trend: 'stable' },
-      globalScoreTrend: 'stable'
-    },
-    adjustments: [],
-    routine: routineData.routine || routineData
-  });
-
-  const loadExistingRoutine = async () => {
-    try {
-      const routineRes = await authFetch(`/routine/${userId}`, { method: "GET" });
-      if (routineRes.ok) {
-        const routineData = await routineRes.json();
-        if (!personalizationResult && routineData) {
-          setPersonalizationResult(buildInitialPersonalization(routineData) as any);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to initialize routine", err);
-    }
-  };
-
-  const initializeRoutine = async () => {
-    await loadSubscriptionPlan();
-    await loadExistingRoutine();
-  };
-
-  const fetchLatestAnalysis = async () => {
-    try {
-      const res = await authFetch(`/analysis/user?limit=1`, { method: "GET" });
-      if (!res.ok) return;
-      const data = await res.json();
-      const firstId = data?.data?.[0]?.id;
-      if (!firstId) return;
-
-      const fullRes = await authFetch(`/analysis/${firstId}`, { method: "GET" });
-      if (fullRes.ok) {
-        setLatestAnalysis(await fullRes.json());
-      }
-    } catch (err) {
-      console.error("Failed to fetch latest analysis", err);
-    }
-  };
-
-  const fetchInsights = async () => {
-    if (!userId) return;
-    try {
-      const insightRes = await skinAgeInsightsService.getInsights(userId).catch(() => null);
-      setSkinAgeInsight(insightRes);
-    } catch (err) {
-      console.error("Failed to fetch insights", err);
-    }
-  };
-
-  useEffect(() => {
-    if (!userId) {
-      setError("Veuillez vous connecter pour voir votre routine.");
-      return;
-    }
-    initializeRoutine();
-    fetchLatestAnalysis();
-    fetchInsights();
-  }, [userId, personalizing]);
-
-  // Listen for analysis completion and automatically update routine
-  useEffect(() => {
-    if (!userId || currentPlan !== 'PRO' || personalizing) return;
-    const handler = () => checkAndHandleAnalysisCompleted(handleUpdateRoutine);
-    handler();
-    const interval = setInterval(handler, 2000);
-    window.addEventListener('storage', handler);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('storage', handler);
-    };
-  }, [userId, currentPlan, personalizing])
-
 
   const handleUpdateRoutine = async () => {
     if (!userId) return
@@ -211,28 +89,94 @@ export default function RoutinesPage() {
     }
   }
 
+  useEffect(() => {
+    if (!userId) { setError("Veuillez vous connecter pour voir votre routine."); return; }
+    const loadSubscriptionPlan = async () => {
+      const subData = await apiGet<any>(`/subscription/${userId}`).catch(() => ({ plan: 'FREE' }));
+      setCurrentPlan(subData?.plan || 'FREE');
+    };
+    const loadExistingRoutine = async () => {
+      try {
+        const routineRes = await authFetch(`/routine/${userId}`, { method: "GET" });
+        if (routineRes.ok) {
+          const rd = await routineRes.json();
+          if (!personalizationResult && rd) {
+            setPersonalizationResult({
+              message: "Routine chargée", personalizationId: "initial",
+              inferredSkinType: rd.inferredSkinType || latestAnalysis?.aiRawResponse?.globalAnalysis?.dominantCondition || "Normal",
+              analysisCount: 1,
+              trends: {
+                hydration: { current: 50, previous: 50, delta: 0, trend: 'stable' },
+                oil: { current: 50, previous: 50, delta: 0, trend: 'stable' },
+                acne: { current: 50, previous: 50, delta: 0, trend: 'stable' },
+                wrinkles: { current: 50, previous: 50, delta: 0, trend: 'stable' },
+                globalScoreTrend: 'stable'
+              },
+              adjustments: [], routine: rd.routine || rd
+            } as any);
+          }
+        }
+      } catch (err) { console.error("Failed to initialize routine", err); }
+    };
+    const fetchLatestAnalysis = async () => {
+      try {
+        const res = await authFetch(`/analysis/user?limit=1`, { method: "GET" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const firstId = data?.data?.[0]?.id;
+        if (!firstId) return;
+        const fullRes = await authFetch(`/analysis/${firstId}`, { method: "GET" });
+        if (fullRes.ok) setLatestAnalysis(await fullRes.json());
+      } catch (err) { console.error("Failed to fetch latest analysis", err); }
+    };
+    const fetchInsights = async () => {
+      try {
+        const insightRes = await skinAgeInsightsService.getInsights(userId!).catch(() => null);
+        setSkinAgeInsight(insightRes);
+      } catch (err) { console.error("Failed to fetch insights", err); }
+    };
+    loadSubscriptionPlan();
+    loadExistingRoutine();
+    fetchLatestAnalysis();
+    fetchInsights();
+  }, [userId, personalizing]);
+
+  useEffect(() => {
+    if (!userId || currentPlan !== 'PRO' || personalizing) return;
+    const handler = () => checkAndHandleAnalysisCompleted(handleUpdateRoutine);
+    handler();
+    const interval = setInterval(handler, 2000);
+    window.addEventListener('storage', handler);
+    return () => { clearInterval(interval); window.removeEventListener('storage', handler); };
+  }, [userId, currentPlan, personalizing])
+
   const handleDownloadReport = async () => {
     if (!userId || !personalizationResult) return;
     setIsGeneratingPdf(true);
     try {
       await generateClinicalReport({
-        user: user,
-        plan: currentPlan,
-        routine: {
-          ...personalizationResult,
-          morning: fullRoutineData?.morning || [],
-          night: fullRoutineData?.night || []
-        },
-        insight: skinAgeInsight,
-        analysis: latestAnalysis,
-        products: fullRoutineData?.recommendedProducts || []
+        user, plan: currentPlan,
+        routine: { ...personalizationResult, morning: fullRoutineData?.morning || [], night: fullRoutineData?.night || [] },
+        insight: skinAgeInsight, analysis: latestAnalysis, products: fullRoutineData?.recommendedProducts || []
       });
-    } catch (err) {
-      console.error("PDF Generation failed:", err);
-    } finally {
-      setIsGeneratingPdf(false);
-    }
+    } catch (err) { console.error("PDF Generation failed:", err); }
+    finally { setIsGeneratingPdf(false); }
   }
+
+  return {
+    t, user, navigate, currentPlan, error, personalizing,
+    personalizationResult, latestAnalysis, completedSteps,
+    skinAgeInsight, isGeneratingPdf, fullRoutineData,
+    handleToggleStep, handleUpdateRoutine, handleDownloadReport,
+    setFullRoutineData,
+  }
+}
+
+/* ── Thin render shell: CC ≤ 3 ── */
+export default function RoutinesPage() {
+  const props = useRoutinesPageLogic()
+  const { t, navigate, currentPlan, error, personalizationResult, latestAnalysis,
+    completedSteps, isGeneratingPdf, handleToggleStep, handleDownloadReport, setFullRoutineData } = props
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-indigo-50 py-10 relative">
@@ -249,7 +193,7 @@ export default function RoutinesPage() {
                   skinType: (personalizationResult?.inferredSkinType || latestAnalysis?.aiRawResponse?.globalAnalysis?.dominantCondition || 'Normal'),
                   age: Number(localStorage.getItem('userAge')) || latestAnalysis?.realAge || latestAnalysis?.skinAge || 30,
                   gender: (localStorage.getItem('userGender') || 'Female') as 'Female' | 'Male' | 'Other',
-                  concerns: personalizationResult?.adjustments?.map(adj => adj.reason) || latestAnalysis?.aiRawResponse?.conditionScores?.filter((c: any) => c.score && c.score > 40).map((c: any) => c.type) || [],
+                  concerns: personalizationResult?.adjustments?.map((adj: any) => adj.reason) || latestAnalysis?.aiRawResponse?.conditionScores?.filter((c: any) => c.score && c.score > 40).map((c: any) => c.type) || [],
                   acneLevel: latestAnalysis?.aiRawResponse?.conditionScores?.find((c: any) => c.type === 'acne')?.score || personalizationResult?.trends?.acne?.current || 0,
                   wrinklesDepth: latestAnalysis?.aiRawResponse?.conditionScores?.find((c: any) => c.type === 'wrinkles')?.score || personalizationResult?.trends?.wrinkles?.current || 0,
                   hydrationLevel: latestAnalysis?.aiRawResponse?.conditionScores?.find((c: any) => c.type === 'hydration')?.score || personalizationResult?.trends?.hydration?.current || 100,
@@ -268,7 +212,7 @@ export default function RoutinesPage() {
           )}
         </div>
         <div className="mt-12 text-center text-xs text-slate-400">
-          {t('routines.tips', { defaultValue: 'Astuce: une routine simple et répétée donne de meilleurs résultats qu’une routine trop complexe.' })}
+          {t('routines.tips', { defaultValue: 'Astuce: une routine simple et répétée donne de meilleurs résultats.' })}
         </div>
       </div>
     </div>
@@ -285,7 +229,7 @@ function ProLockOverlay({ t, navigate }: { t: any, navigate: any }) {
         {t('routines.pro_only.title', { defaultValue: 'Routine Personnalisée PRO' })} <span className="text-[#0d9488]">PRO</span>
       </h1>
       <p className="mb-8 max-w-md text-lg font-medium text-slate-500 leading-relaxed">
-        {t('routines.pro_only.desc', { defaultValue: 'Le Routine Builder intelligent, qui adapte vos soins selon vos analyses IA, est réservé aux membres PRO.' })}
+        {t('routines.pro_only.desc', { defaultValue: 'Le Routine Builder intelligent est réservé aux membres PRO.' })}
       </p>
       <div className="flex gap-4">
         <button onClick={() => navigate('/dashboard')} className="px-8 py-4 rounded-2xl font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">
@@ -299,28 +243,47 @@ function ProLockOverlay({ t, navigate }: { t: any, navigate: any }) {
   );
 }
 
+function TrendIcon({ trend }: { trend: TrendDetail['trend'] }) {
+  if (trend === 'improving') return <ArrowUpRight className="text-emerald-500" size={16} />
+  if (trend === 'worsening') return <ArrowDownRight className="text-rose-500" size={16} />
+  return <Minus className="text-slate-400" size={16} />
+}
+
+function TrendCard({ label, detail }: { label: string, detail: TrendDetail }) {
+  const { t } = useTranslation()
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-white p-3 shadow-sm">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t(`routines.${label}`, { defaultValue: label })}</div>
+      <div className="mt-1 flex items-center justify-between">
+        <div className="text-lg font-black text-slate-900">{detail.current}%</div>
+        <div className="flex items-center gap-1">
+          <TrendIcon trend={detail.trend} />
+          <span className={`text-xs font-bold ${detail.delta > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+            {detail.delta > 0 ? '+' : ''}{detail.delta}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function RoutineHeader({ t, handleDownloadReport, isGeneratingPdf, personalizationResult, error }: any) {
   return (
     <div className="relative overflow-hidden rounded-3xl border border-teal-100/80 bg-white/80 backdrop-blur p-7 shadow-sm">
       <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-teal-200/30 blur-2xl" />
       <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-indigo-200/30 blur-2xl" />
-
       <div className="relative flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-teal-100 bg-teal-50 px-3 py-1 text-xs font-bold uppercase tracking-widest text-teal-800">
-            <Sparkles size={14} />
-            {t('routines.builder', { defaultValue: 'Routine Builder' })}
+            <Sparkles size={14} /> {t('routines.builder', { defaultValue: 'Routine Builder' })}
           </div>
           {error && <div className="mt-3 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-600">{error}</div>}
           <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900">{t('routines.title', { defaultValue: 'Ta routine AM / PM' })}</h1>
           <p className="mt-1 text-sm text-slate-600">{t('routines.subtitle')}</p>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={handleDownloadReport}
-            disabled={isGeneratingPdf || !personalizationResult}
-            className="flex items-center gap-2 rounded-2xl border border-teal-200 bg-white px-5 py-3 text-sm font-bold text-teal-700 shadow-sm hover:bg-teal-50 disabled:opacity-50 transition-all"
-          >
+          <button onClick={handleDownloadReport} disabled={isGeneratingPdf || !personalizationResult}
+            className="flex items-center gap-2 rounded-2xl border border-teal-200 bg-white px-5 py-3 text-sm font-bold text-teal-700 shadow-sm hover:bg-teal-50 disabled:opacity-50 transition-all">
             {isGeneratingPdf ? <RefreshCw size={18} className="animate-spin" /> : <FileText size={18} />}
             {t('routines.pdf', { defaultValue: 'Rapport PDF' })}
           </button>
