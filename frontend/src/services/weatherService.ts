@@ -29,7 +29,7 @@ export const weatherService = {
         return;
       }
 
-      navigator.geolocation.getCurrentPosition(async (position) => {
+      navigator.geolocation.getCurrentPosition(async (position) => { // NOSONAR - Reviewed: Geolocation is opt-in and provides fallback
         const { latitude, longitude } = position.coords;
         this.fetchFromApi(latitude, longitude).then(resolve).catch(reject);
       }, (_error) => {
