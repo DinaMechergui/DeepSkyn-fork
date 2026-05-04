@@ -16,7 +16,9 @@ pipeline {
         PORT            = '3001'
         PORT            = '3001'
         PORT            = '3001'
-        SONAR_HOST_URL  = "http://172.20.10.5:9000"
+        PORT            = '3001'
+        // IP de la passerelle Docker (Vérifiée via Diagnostic Réseau)
+        SONAR_HOST_URL  = "http://172.17.0.1:9000"
     }
 
     stages {
