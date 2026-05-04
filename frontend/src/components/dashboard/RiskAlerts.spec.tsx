@@ -44,6 +44,14 @@ Object.defineProperty(window, 'speechSynthesis', {
   writable: true,
 });
 
+global.SpeechSynthesisUtterance = vi.fn().mockImplementation((text) => ({
+  text,
+  lang: '',
+  rate: 1,
+  onend: null,
+  onerror: null,
+})) as any;
+
 describe('RiskAlerts Component', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -132,5 +140,91 @@ describe('RiskAlerts Component', () => {
     const settingsButton = screen.getByTitle(/Ajustez votre rythme de vie/i);
     fireEvent.click(settingsButton);
     expect(screen.getByText(/Mon Rythme de Vie/i)).toBeDefined();
+  });
+
+  it('should handle speech synthesis', async () => {
+    const mockRisks = [
+      { type: 'acne', risk_score: 80, cause: 'Test', prevention: ['Tip 1'], urgency: 'high' }
+    ];
+    (apiClient.post as any).mockResolvedValue({
+      data: { success: true, data: { risks: mockRisks, overall_risk_score: 80, immediate_actions: ['Action 1'] } }
+    });
+
+    await act(async () => {
+      render(<RiskAlerts />);
+    });
+
+    const speakButton = screen.getByText(/Ecouter/i);
+    fireEvent.click(speakButton);
+    
+    expect(window.speechSynthesis.speak).toHaveBeenCalled();
+    expect(screen.getByText(/Arreter/i)).toBeDefined();
+
+    fireEvent.click(screen.getByText(/Arreter/i));
+    expect(window.speechSynthesis.cancel).toHaveBeenCalled();
+  });
+
+  it('should handle API errors and show fallback risks', async () => {
+    (apiClient.post as any).mockRejectedValue(new Error('API Error'));
+    
+    await act(async () => {
+      render(<RiskAlerts />);
+    });
+
+    expect(screen.getByText(/API Error/i)).toBeDefined();
+    // Check for fallback risks (acne, aging, dryness are in setFallbackRisks)
+    expect(screen.getByText(/acne/i)).toBeDefined();
+    expect(screen.getByText(/aging/i)).toBeDefined();
+  });
+
+  it('should refresh data when refresh button is clicked', async () => {
+    const mockOnRefresh = vi.fn();
+    await act(async () => {
+      render(<RiskAlerts onRefresh={mockOnRefresh} />);
+    });
+
+    const refreshBtn = screen.getByText(/Refresh/i);
+    fireEvent.click(refreshBtn);
+
+    expect(apiClient.post).toHaveBeenCalled();
+    expect(mockOnRefresh).toHaveBeenCalled();
+  });
+
+  it('should save habits and refresh prediction', async () => {
+    await act(async () => {
+      render(<RiskAlerts />);
+    });
+
+    fireEvent.click(screen.getByTitle(/Ajustez votre rythme de vie/i));
+    
+    const sleepInput = screen.getByText(/Sommeil/i).parentElement?.querySelector('input');
+    if (sleepInput) {
+      fireEvent.change(sleepInput, { target: { value: '9' } });
+    }
+
+    const saveBtn = screen.getByText(/Recalculer les risques/i);
+    fireEvent.click(saveBtn);
+
+    expect(localStorage.getItem('userHabits')).toContain('"sleepHours":9');
+    expect(apiClient.post).toHaveBeenCalled();
+  });
+
+  it('should expand risk details on click', async () => {
+    const mockRisks = [
+      { type: 'acne', risk_score: 80, cause: 'Specific cause', prevention: ['Tip A'], urgency: 'high' }
+    ];
+    (apiClient.post as any).mockResolvedValue({
+      data: { success: true, data: { risks: mockRisks, overall_risk_score: 80 } }
+    });
+
+    await act(async () => {
+      render(<RiskAlerts />);
+    });
+
+    const riskHeader = screen.getByText(/acne/i);
+    fireEvent.click(riskHeader);
+
+    expect(screen.getByText(/Why this risk?/i)).toBeDefined();
+    expect(screen.getByText(/Specific cause/i)).toBeDefined();
   });
 });
