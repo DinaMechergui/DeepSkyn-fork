@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/84</span>
+                <span class='fraction'>0/91</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/84</span>
+                <span class='fraction'>0/91</span>
             </div>
         
             
@@ -178,7 +178,15 @@
 <a name='L113'></a><a href='#L113'>113</a>
 <a name='L114'></a><a href='#L114'>114</a>
 <a name='L115'></a><a href='#L115'>115</a>
-<a name='L116'></a><a href='#L116'>116</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -197,29 +205,18 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -234,8 +231,27 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -310,45 +326,23 @@ export interface SkinAdvice {
 }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >export const weatherService = {</span>
-<span class="cstat-no" title="statement not covered" >  async getWeatherData(): Promise&lt;WeatherData&gt; {</span>
-    // Geolocation is necessary to provide location-specific skin care advice
-    // based on local UV index, humidity, and temperature.
+<span class="cstat-no" title="statement not covered" >  async getWeatherData(coords?: { latitude: number, longitude: number }): Promise&lt;WeatherData&gt; {</span>
+    // Geolocation is optional; manual coordinates can be provided to avoid intrusive permissions.
 <span class="cstat-no" title="statement not covered" >    return new Promise((resolve, reject) =&gt; {</span>
+      // Use provided coordinates if available
+<span class="cstat-no" title="statement not covered" >      if (coords) {</span>
+<span class="cstat-no" title="statement not covered" >        this.fetchFromApi(coords.latitude, coords.longitude).then(resolve).catch(reject);</span>
+<span class="cstat-no" title="statement not covered" >        return;</span>
+<span class="cstat-no" title="statement not covered" >      }</span>
+&nbsp;
 <span class="cstat-no" title="statement not covered" >      if (!navigator.geolocation) {</span>
 <span class="cstat-no" title="statement not covered" >        reject(new Error('Geolocation not supported'));</span>
 <span class="cstat-no" title="statement not covered" >        return;</span>
 <span class="cstat-no" title="statement not covered" >      }</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >      navigator.geolocation.getCurrentPosition(async (position) =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >        try {</span>
-<span class="cstat-no" title="statement not covered" >          const { latitude, longitude } = position.coords;</span>
-          
-          // Use Open-Meteo for weather and UV index (Free, no API key)
-<span class="cstat-no" title="statement not covered" >          const weatherRes = await axios.get(</span>
-<span class="cstat-no" title="statement not covered" >            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&amp;longitude=${longitude}&amp;current=temperature_2m,relative_humidity_2m,is_day&amp;daily=uv_index_max&amp;timezone=auto`</span>
-<span class="cstat-no" title="statement not covered" >          );</span>
-          
-<span class="cstat-no" title="statement not covered" >          const current = weatherRes.data.current;</span>
-<span class="cstat-no" title="statement not covered" >          const uvIndex = weatherRes.data.daily.uv_index_max[0];</span>
-          
-          // Reverse geocoding to get city name (optional, using a free service)
-<span class="cstat-no" title="statement not covered" >          let city = 'Votre position';</span>
-<span class="cstat-no" title="statement not covered" >          try {</span>
-<span class="cstat-no" title="statement not covered" >            const geoRes = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&amp;lat=${latitude}&amp;lon=${longitude}`);</span>
-<span class="cstat-no" title="statement not covered" >            city = geoRes.data.address.city || geoRes.data.address.town || geoRes.data.address.village || city;</span>
-<span class="cstat-no" title="statement not covered" >          } catch (e) {</span>
-<span class="cstat-no" title="statement not covered" >            console.warn('Geocoding failed');</span>
-<span class="cstat-no" title="statement not covered" >          }</span>
-&nbsp;
-<span class="cstat-no" title="statement not covered" >          resolve({</span>
-<span class="cstat-no" title="statement not covered" >            temp: current.temperature_2m,</span>
-<span class="cstat-no" title="statement not covered" >            humidity: current.relative_humidity_2m,</span>
-<span class="cstat-no" title="statement not covered" >            uvIndex: uvIndex,</span>
-<span class="cstat-no" title="statement not covered" >            city: city</span>
-<span class="cstat-no" title="statement not covered" >          });</span>
-<span class="cstat-no" title="statement not covered" >        } catch (error) {</span>
-<span class="cstat-no" title="statement not covered" >          reject(error);</span>
-<span class="cstat-no" title="statement not covered" >        }</span>
+<span class="cstat-no" title="statement not covered" >        const { latitude, longitude } = position.coords;</span>
+<span class="cstat-no" title="statement not covered" >        this.fetchFromApi(latitude, longitude).then(resolve).catch(reject);</span>
 <span class="cstat-no" title="statement not covered" >      }, (_error) =&gt; {</span>
         // Fallback for demo if geolocation is denied
 <span class="cstat-no" title="statement not covered" >        resolve({</span>
@@ -359,6 +353,36 @@ export interface SkinAdvice {
 <span class="cstat-no" title="statement not covered" >        });</span>
 <span class="cstat-no" title="statement not covered" >      });</span>
 <span class="cstat-no" title="statement not covered" >    });</span>
+<span class="cstat-no" title="statement not covered" >  },</span>
+  
+<span class="cstat-no" title="statement not covered" >  async fetchFromApi(latitude: number, longitude: number): Promise&lt;WeatherData&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    try {</span>
+      // Use Open-Meteo for weather and UV index (Free, no API key)
+<span class="cstat-no" title="statement not covered" >      const weatherRes = await axios.get(</span>
+<span class="cstat-no" title="statement not covered" >        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&amp;longitude=${longitude}&amp;current=temperature_2m,relative_humidity_2m,is_day&amp;daily=uv_index_max&amp;timezone=auto`</span>
+<span class="cstat-no" title="statement not covered" >      );</span>
+      
+<span class="cstat-no" title="statement not covered" >      const current = weatherRes.data.current;</span>
+<span class="cstat-no" title="statement not covered" >      const uvIndex = weatherRes.data.daily.uv_index_max[0];</span>
+      
+      // Reverse geocoding to get city name (optional, using a free service)
+<span class="cstat-no" title="statement not covered" >      let city = 'Votre position';</span>
+<span class="cstat-no" title="statement not covered" >      try {</span>
+<span class="cstat-no" title="statement not covered" >        const geoRes = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&amp;lat=${latitude}&amp;lon=${longitude}`);</span>
+<span class="cstat-no" title="statement not covered" >        city = geoRes.data.address.city || geoRes.data.address.town || geoRes.data.address.village || city;</span>
+<span class="cstat-no" title="statement not covered" >      } catch (e) {</span>
+<span class="cstat-no" title="statement not covered" >        console.warn('Geocoding failed');</span>
+<span class="cstat-no" title="statement not covered" >      }</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >      return {</span>
+<span class="cstat-no" title="statement not covered" >        temp: current.temperature_2m,</span>
+<span class="cstat-no" title="statement not covered" >        humidity: current.relative_humidity_2m,</span>
+<span class="cstat-no" title="statement not covered" >        uvIndex: uvIndex,</span>
+<span class="cstat-no" title="statement not covered" >        city: city</span>
+<span class="cstat-no" title="statement not covered" >      };</span>
+<span class="cstat-no" title="statement not covered" >    } catch (error) {</span>
+<span class="cstat-no" title="statement not covered" >      throw error;</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
 <span class="cstat-no" title="statement not covered" >  },</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >  getAdvice(data: WeatherData): SkinAdvice {</span>
@@ -415,7 +439,7 @@ export interface SkinAdvice {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-05-04T22:08:28.960Z
+                at 2026-05-04T22:12:58.960Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

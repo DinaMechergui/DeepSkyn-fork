@@ -15,45 +15,23 @@ export interface SkinAdvice {
 }
 
 export const weatherService = {
-  async getWeatherData(): Promise<WeatherData> {
-    // Geolocation is necessary to provide location-specific skin care advice
-    // based on local UV index, humidity, and temperature.
+  async getWeatherData(coords?: { latitude: number, longitude: number }): Promise<WeatherData> {
+    // Geolocation is optional; manual coordinates can be provided to avoid intrusive permissions.
     return new Promise((resolve, reject) => {
+      // Use provided coordinates if available
+      if (coords) {
+        this.fetchFromApi(coords.latitude, coords.longitude).then(resolve).catch(reject);
+        return;
+      }
+
       if (!navigator.geolocation) {
         reject(new Error('Geolocation not supported'));
         return;
       }
 
       navigator.geolocation.getCurrentPosition(async (position) => {
-        try {
-          const { latitude, longitude } = position.coords;
-          
-          // Use Open-Meteo for weather and UV index (Free, no API key)
-          const weatherRes = await axios.get(
-            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,is_day&daily=uv_index_max&timezone=auto`
-          );
-          
-          const current = weatherRes.data.current;
-          const uvIndex = weatherRes.data.daily.uv_index_max[0];
-          
-          // Reverse geocoding to get city name (optional, using a free service)
-          let city = 'Votre position';
-          try {
-            const geoRes = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-            city = geoRes.data.address.city || geoRes.data.address.town || geoRes.data.address.village || city;
-          } catch (e) {
-            console.warn('Geocoding failed');
-          }
-
-          resolve({
-            temp: current.temperature_2m,
-            humidity: current.relative_humidity_2m,
-            uvIndex: uvIndex,
-            city: city
-          });
-        } catch (error) {
-          reject(error);
-        }
+        const { latitude, longitude } = position.coords;
+        this.fetchFromApi(latitude, longitude).then(resolve).catch(reject);
       }, (_error) => {
         // Fallback for demo if geolocation is denied
         resolve({
@@ -64,6 +42,36 @@ export const weatherService = {
         });
       });
     });
+  },
+  
+  async fetchFromApi(latitude: number, longitude: number): Promise<WeatherData> {
+    try {
+      // Use Open-Meteo for weather and UV index (Free, no API key)
+      const weatherRes = await axios.get(
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,is_day&daily=uv_index_max&timezone=auto`
+      );
+      
+      const current = weatherRes.data.current;
+      const uvIndex = weatherRes.data.daily.uv_index_max[0];
+      
+      // Reverse geocoding to get city name (optional, using a free service)
+      let city = 'Votre position';
+      try {
+        const geoRes = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+        city = geoRes.data.address.city || geoRes.data.address.town || geoRes.data.address.village || city;
+      } catch (e) {
+        console.warn('Geocoding failed');
+      }
+
+      return {
+        temp: current.temperature_2m,
+        humidity: current.relative_humidity_2m,
+        uvIndex: uvIndex,
+        city: city
+      };
+    } catch (error) {
+      throw error;
+    }
   },
 
   getAdvice(data: WeatherData): SkinAdvice {
