@@ -456,24 +456,81 @@ function ProgressSection({ currentPlan, t, timelineError, timelineLoading, timel
   );
 }
 
+function getReportLocale(lang: string): string {
+  if (lang === 'ar') return 'ar-SA';
+  if (lang === 'en') return 'en-US';
+  return 'fr-FR';
+}
+
+function getConditionScoreColor(score: number): string {
+  if (score >= 75) return '#10b981';
+  if (score >= 50) return '#f59e0b';
+  return '#ef4444';
+}
+
 function getScoreLabel(score: number, t: any): string {
   if (score >= 75) return t('analysis.optimal');
   if (score >= 50) return t('analysis.moderate');
   return t('analysis.critical');
 }
 
+function renderRoutineContent(routineResult: any, routineError: boolean, currentPlan: string, t: any) {
+  if (currentPlan === 'FREE') {
+    return (
+      <div style={{ padding: 40, textAlign: 'center', color: '#64748b', border: '1px dashed #e2e8f0', borderRadius: 20, background: '#f8fafc' }}>
+        <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1e293b' }}>{t('analysis.pdf.upgrade_title')}</h3>
+        {t('analysis.pdf.pro_routine_only')}
+      </div>
+    );
+  }
+  if (routineResult) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 35 }}>
+        <div className="no-break" style={{ width: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, padding: '10px 20px', background: '#f0f9ff', borderRadius: 14 }}>
+            <Sun size={24} color="#0369a1" /> <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0369a1', margin: 0 }}>{t('analysis.pdf.morning_routine')}</h3>
+          </div>
+          {routineResult.morning.map((step: any, i: number) => (
+            <div key={step.stepName || `morning-${i}`} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', marginBottom: 10 }}>
+              <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#0369a1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{i + 1}</div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 800 }}>{step.stepName} — <span style={{ color: '#0369a1' }}>{step.product?.name}</span></div>
+                <div style={{ fontSize: 12, color: '#64748b' }}>{step.instruction}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="no-break" style={{ width: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, padding: '10px 20px', background: '#f5f3ff', borderRadius: 14 }}>
+            <Moon size={24} color="#5b21b6" /> <h3 style={{ fontSize: 18, fontWeight: 800, color: '#5b21b6', margin: 0 }}>{t('analysis.pdf.night_routine')}</h3>
+          </div>
+          {routineResult.night.map((step: any, i: number) => (
+            <div key={step.stepName || `night-${i}`} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', marginBottom: 10 }}>
+              <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#5b21b6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{i + 1}</div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 800 }}>{step.stepName} — <span style={{ color: '#5b21b6' }}>{step.product?.name}</span></div>
+                <div style={{ fontSize: 12, color: '#64748b' }}>{step.instruction}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ padding: 25, borderRadius: 24, background: 'linear-gradient(135deg, #f0fdfa, #f0f9ff)', border: '1px solid #ccfbf1' }}>
+          <p style={{ margin: 0, fontSize: 14, color: '#134e4a', fontStyle: 'italic' }}>"{routineResult.generalAdvice}"</p>
+        </div>
+      </div>
+    );
+  }
+  if (routineError) {
+    return <div style={{ padding: 40, textAlign: 'center', color: '#ef4444' }}>⚠️ {t('analysis.errors.routine_load_fail')}</div>;
+  }
+  return <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>{t('analysis.routine_generating')}</div>;
+}
+
 function PrintableReport({ data }: { data: any }) {
   const { result, profile, CONDITION_META, t, routineResult, routineError, currentPlan, globalScoreColor, i18n, CONDITION_DETAILS } = data;
-  
-  const getLocale = (lang: string) => {
-    if (lang === 'ar') return 'ar-SA';
-    if (lang === 'en') return 'en-US';
-    return 'fr-FR';
-  };
-
-  const currentLocale = getLocale(i18n.language);
-  const formattedDate = new Date().toLocaleDateString(currentLocale, { 
-    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+  const currentLocale = getReportLocale(i18n.language);
+  const formattedDate = new Date().toLocaleDateString(currentLocale, {
+    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
   });
   return (
     <div id="printable-report" style={{
@@ -566,11 +623,7 @@ function PrintableReport({ data }: { data: any }) {
               const meta = CONDITION_META[c.type];
               const details = CONDITION_DETAILS[c.type];
               const scoreValue = typeof c.score === 'number' ? c.score : 0;
-              const scoreColor = (() => {
-                if (scoreValue >= 75) return '#10b981';
-                if (scoreValue >= 50) return '#f59e0b';
-                return '#ef4444';
-              })();
+              const scoreColor = getConditionScoreColor(scoreValue);
               return (
                 <div key={c.type} className="no-break" style={{ padding: 22, borderRadius: 20, border: '1px solid #f1f5f9', background: '#fff', marginBottom: 15, display: 'inline-block', width: '100%', boxSizing: 'border-box' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
@@ -614,57 +667,7 @@ function PrintableReport({ data }: { data: any }) {
       {/* Page 2: Routine */}
       <div className="page-break" style={{ paddingTop: '10mm' }}>
         <h2 style={{ fontSize: 22, fontWeight: 900, color: '#0d9488', marginBottom: 30, textAlign: 'center', textTransform: 'uppercase' }}>{t('analysis.pdf.complete_care_strategy', { defaultValue: 'Stratégie de Soins' })}</h2>
-        {(() => {
-          if (currentPlan === 'FREE') {
-            return (
-              <div style={{ padding: 40, textAlign: 'center', color: '#64748b', border: '1px dashed #e2e8f0', borderRadius: 20, background: '#f8fafc' }}>
-                <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1e293b' }}>{t('analysis.pdf.upgrade_title')}</h3>
-                {t('analysis.pdf.pro_routine_only')}
-              </div>
-            );
-          }
-          if (routineResult) {
-            return (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 35 }}>
-                <div className="no-break" style={{ width: '100%', boxSizing: 'border-box' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, padding: '10px 20px', background: '#f0f9ff', borderRadius: 14 }}>
-                    <Sun size={24} color="#0369a1" /> <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0369a1', margin: 0 }}>{t('analysis.pdf.morning_routine')}</h3>
-                  </div>
-                  {routineResult.morning.map((step: any, i: number) => (
-                    <div key={step.stepName || `morning-${i}`} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', marginBottom: 10 }}>
-                      <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#0369a1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{i + 1}</div>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 800 }}>{step.stepName} — <span style={{ color: '#0369a1' }}>{step.product?.name}</span></div>
-                        <div style={{ fontSize: 12, color: '#64748b' }}>{step.instruction}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="no-break" style={{ width: '100%', boxSizing: 'border-box' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, padding: '10px 20px', background: '#f5f3ff', borderRadius: 14 }}>
-                    <Moon size={24} color="#5b21b6" /> <h3 style={{ fontSize: 18, fontWeight: 800, color: '#5b21b6', margin: 0 }}>{t('analysis.pdf.night_routine')}</h3>
-                  </div>
-                  {routineResult.night.map((step: any, i: number) => (
-                    <div key={step.stepName || `night-${i}`} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', marginBottom: 10 }}>
-                      <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#5b21b6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{i + 1}</div>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 800 }}>{step.stepName} — <span style={{ color: '#5b21b6' }}>{step.product?.name}</span></div>
-                        <div style={{ fontSize: 12, color: '#64748b' }}>{step.instruction}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ padding: 25, borderRadius: 24, background: 'linear-gradient(135deg, #f0fdfa, #f0f9ff)', border: '1px solid #ccfbf1' }}>
-                  <p style={{ margin: 0, fontSize: 14, color: '#134e4a', fontStyle: 'italic' }}>"{routineResult.generalAdvice}"</p>
-                </div>
-              </div>
-            );
-          }
-          if (routineError) {
-            return <div style={{ padding: 40, textAlign: 'center', color: '#ef4444' }}>⚠️ {t('analysis.errors.routine_load_fail')}</div>;
-          }
-          return <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>{t('analysis.routine_generating')}</div>;
-        })()}
+        {renderRoutineContent(routineResult, routineError, currentPlan, t)}
       </div>
 
       <div style={{ marginTop: 40, paddingTop: 30, borderTop: '1px solid #e2e8f0', textAlign: 'center' }}>

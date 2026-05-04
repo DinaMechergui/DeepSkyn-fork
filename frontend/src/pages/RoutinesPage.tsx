@@ -14,6 +14,16 @@ import { useTranslation } from "react-i18next"
 
 type RoutineResponse = any
 
+async function checkAndHandleAnalysisCompleted(onUpdateRoutine: () => Promise<void>) {
+  const sessionCompleted = sessionStorage.getItem('analysisCompleted');
+  const storageCompleted = localStorage.getItem('analysisJustCompleted');
+  if (sessionCompleted || storageCompleted) {
+    sessionStorage.removeItem('analysisCompleted');
+    localStorage.removeItem('analysisJustCompleted');
+    await onUpdateRoutine();
+  }
+}
+
 const TrendIcon = ({ trend }: { trend: TrendDetail['trend'] }) => {
   if (trend === 'improving') return <ArrowUpRight className="text-emerald-500" size={16} />
   if (trend === 'worsening') return <ArrowDownRight className="text-rose-500" size={16} />
@@ -173,26 +183,13 @@ export default function RoutinesPage() {
   // Listen for analysis completion and automatically update routine
   useEffect(() => {
     if (!userId || currentPlan !== 'PRO' || personalizing) return;
-
-    const handleAnalysisCompleted = async () => {
-      const sessionCompleted = sessionStorage.getItem('analysisCompleted');
-      const storageCompleted = localStorage.getItem('analysisJustCompleted');
-
-      if (sessionCompleted || storageCompleted) {
-        sessionStorage.removeItem('analysisCompleted');
-        localStorage.removeItem('analysisJustCompleted');
-        console.log('Auto-updating routine after new analysis...');
-        await handleUpdateRoutine();
-      }
-    }
-
-    handleAnalysisCompleted();
-    const interval = setInterval(handleAnalysisCompleted, 2000);
-    window.addEventListener('storage', handleAnalysisCompleted);
-
+    const handler = () => checkAndHandleAnalysisCompleted(handleUpdateRoutine);
+    handler();
+    const interval = setInterval(handler, 2000);
+    window.addEventListener('storage', handler);
     return () => {
       clearInterval(interval);
-      window.removeEventListener('storage', handleAnalysisCompleted);
+      window.removeEventListener('storage', handler);
     };
   }, [userId, currentPlan, personalizing])
 
