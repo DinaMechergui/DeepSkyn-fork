@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/278</span>
+                <span class='fraction'>0/266</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/278</span>
+                <span class='fraction'>0/266</span>
             </div>
         
             
@@ -418,22 +418,7 @@
 <a name='L353'></a><a href='#L353'>353</a>
 <a name='L354'></a><a href='#L354'>354</a>
 <a name='L355'></a><a href='#L355'>355</a>
-<a name='L356'></a><a href='#L356'>356</a>
-<a name='L357'></a><a href='#L357'>357</a>
-<a name='L358'></a><a href='#L358'>358</a>
-<a name='L359'></a><a href='#L359'>359</a>
-<a name='L360'></a><a href='#L360'>360</a>
-<a name='L361'></a><a href='#L361'>361</a>
-<a name='L362'></a><a href='#L362'>362</a>
-<a name='L363'></a><a href='#L363'>363</a>
-<a name='L364'></a><a href='#L364'>364</a>
-<a name='L365'></a><a href='#L365'>365</a>
-<a name='L366'></a><a href='#L366'>366</a>
-<a name='L367'></a><a href='#L367'>367</a>
-<a name='L368'></a><a href='#L368'>368</a>
-<a name='L369'></a><a href='#L369'>369</a>
-<a name='L370'></a><a href='#L370'>370</a>
-<a name='L371'></a><a href='#L371'>371</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L356'></a><a href='#L356'>356</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -694,24 +679,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -1064,42 +1034,27 @@ export interface GoogleUserInfo {
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    const isGooglePhoto = pictureUrl.includes('googleusercontent.com');</span>
 &nbsp;
-    // Base qualities
-<span class="cstat-no" title="statement not covered" >    let quality = 0.3;</span>
-<span class="cstat-no" title="statement not covered" >    let source = 'unknown';</span>
-<span class="cstat-no" title="statement not covered" >    let description = 'Unknown photo source';</span>
-&nbsp;
 <span class="cstat-no" title="statement not covered" >    const isLikelyAvatar = pictureUrl.includes('ACg8oc');</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    if (isGooglePhoto &amp;&amp; !isLikelyAvatar) {</span>
-      // Photo Google probablement réelle
-<span class="cstat-no" title="statement not covered" >      quality = 0.9;</span>
-<span class="cstat-no" title="statement not covered" >      source = 'google_real';</span>
-<span class="cstat-no" title="statement not covered" >      description = 'Real Google profile photo';</span>
-<span class="cstat-no" title="statement not covered" >    } else if (isGooglePhoto &amp;&amp; isLikelyAvatar) {</span>
-      // Avatar Google par défaut
-<span class="cstat-no" title="statement not covered" >      quality = 0.2;</span>
-<span class="cstat-no" title="statement not covered" >      source = 'google_default';</span>
-<span class="cstat-no" title="statement not covered" >      description = 'Default Google profile photo (letter/avatar)';</span>
-<span class="cstat-no" title="statement not covered" >    } else if (pictureUrl.startsWith('https://lh3.googleusercontent.com/a/')) {</span>
-<span class="cstat-no" title="statement not covered" >      if (pictureUrl.includes('ACg8oc')) {</span>
-<span class="cstat-no" title="statement not covered" >        quality = 0.2;</span>
-<span class="cstat-no" title="statement not covered" >        source = 'google_avatar';</span>
-<span class="cstat-no" title="statement not covered" >        description = 'Google avatar/letter photo';</span>
-<span class="cstat-no" title="statement not covered" >      } else {</span>
-<span class="cstat-no" title="statement not covered" >        quality = 0.8;</span>
-<span class="cstat-no" title="statement not covered" >        source = 'google_high_quality';</span>
-<span class="cstat-no" title="statement not covered" >        description = 'High quality Google photo';</span>
+    // Determine photo quality, source and description based on URL pattern
+<span class="cstat-no" title="statement not covered" >    const { quality, source, description } = (() =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >      if (isGooglePhoto &amp;&amp; !isLikelyAvatar) {</span>
+<span class="cstat-no" title="statement not covered" >        return { quality: 0.9, source: 'google_real', description: 'Real Google profile photo' };</span>
 <span class="cstat-no" title="statement not covered" >      }</span>
-<span class="cstat-no" title="statement not covered" >    } else if (pictureUrl.startsWith('https://')) {</span>
-<span class="cstat-no" title="statement not covered" >      quality = 0.6;</span>
-<span class="cstat-no" title="statement not covered" >      source = 'external_https';</span>
-<span class="cstat-no" title="statement not covered" >      description = 'External HTTPS photo';</span>
-<span class="cstat-no" title="statement not covered" >    } else {</span>
-<span class="cstat-no" title="statement not covered" >      quality = 0.3;</span>
-<span class="cstat-no" title="statement not covered" >      source = 'other';</span>
-<span class="cstat-no" title="statement not covered" >      description = 'Other photo source';</span>
-<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >      if (isGooglePhoto &amp;&amp; isLikelyAvatar) {</span>
+<span class="cstat-no" title="statement not covered" >        return { quality: 0.2, source: 'google_default', description: 'Default Google profile photo (letter/avatar)' };</span>
+<span class="cstat-no" title="statement not covered" >      }</span>
+<span class="cstat-no" title="statement not covered" >      if (pictureUrl.startsWith('https://lh3.googleusercontent.com/a/')) {</span>
+<span class="cstat-no" title="statement not covered" >        if (pictureUrl.includes('ACg8oc')) {</span>
+<span class="cstat-no" title="statement not covered" >          return { quality: 0.2, source: 'google_avatar', description: 'Google avatar/letter photo' };</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
+<span class="cstat-no" title="statement not covered" >        return { quality: 0.8, source: 'google_high_quality', description: 'High quality Google photo' };</span>
+<span class="cstat-no" title="statement not covered" >      }</span>
+<span class="cstat-no" title="statement not covered" >      if (pictureUrl.startsWith('https://')) {</span>
+<span class="cstat-no" title="statement not covered" >        return { quality: 0.6, source: 'external_https', description: 'External HTTPS photo' };</span>
+<span class="cstat-no" title="statement not covered" >      }</span>
+<span class="cstat-no" title="statement not covered" >      return { quality: 0.3, source: 'other', description: 'Other photo source' };</span>
+<span class="cstat-no" title="statement not covered" >    })();</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    return {</span>
 <span class="cstat-no" title="statement not covered" >      hasRealPhoto: isGooglePhoto &amp;&amp; !isLikelyAvatar,</span>
@@ -1180,7 +1135,7 @@ export interface GoogleUserInfo {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-05-04T17:46:21.469Z
+                at 2026-05-04T18:03:09.884Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

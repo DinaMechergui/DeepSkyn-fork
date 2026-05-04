@@ -388,7 +388,7 @@ export default function UpgradePage() {
           const c = COLOR_MAP[plan.color];
           const Icon = plan.icon;
           const isCurrent = plan.id === currentPlan;
-          const isLocked = planLevel[plan.id as Plan] <= planLevel[currentPlan];
+          const isLocked = planLevel[plan.id] <= planLevel[currentPlan];
 
           return (
             <div
@@ -416,22 +416,30 @@ export default function UpgradePage() {
 
                 {/* CTA Button */}
                 <div className="mt-5">
-                  {isCurrent ? (
-                    <div className="w-full py-3 rounded-xl bg-slate-100 text-slate-500 font-bold text-sm text-center">
-                      ✓ Plan Actuel
-                    </div>
-                  ) : isLocked ? (
-                    <div className="w-full py-3 rounded-xl bg-slate-50 text-slate-300 font-bold text-sm text-center border border-slate-100">
-                      Non disponible
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => handleUpgradeClick(plan)}
-                      className={`w-full py-3 rounded-xl text-white font-bold text-sm transition-all flex items-center justify-center gap-2 ${c.btn} hover:shadow-lg active:scale-95`}
-                    >
-                      Passer à {plan.name} <ArrowRight size={15} />
-                    </button>
-                  )}
+                  {(() => {
+                    if (isCurrent) {
+                      return (
+                        <div className="w-full py-3 rounded-xl bg-slate-100 text-slate-500 font-bold text-sm text-center">
+                          ✓ Plan Actuel
+                        </div>
+                      );
+                    }
+                    if (isLocked) {
+                      return (
+                        <div className="w-full py-3 rounded-xl bg-slate-50 text-slate-300 font-bold text-sm text-center border border-slate-100">
+                          Non disponible
+                        </div>
+                      );
+                    }
+                    return (
+                      <button
+                        onClick={() => handleUpgradeClick(plan)}
+                        className={`w-full py-3 rounded-xl text-white font-bold text-sm transition-all flex items-center justify-center gap-2 ${c.btn} hover:shadow-lg active:scale-95`}
+                      >
+                        Passer à {plan.name} <ArrowRight size={15} />
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
 

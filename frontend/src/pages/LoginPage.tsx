@@ -92,10 +92,10 @@ export default function LoginPage() {
 
     const parsed = loginSchema.safeParse({ email, password })
     if (!parsed.success) {
-      const tree = parsed.error.format();
+      const flat = parsed.error.flatten().fieldErrors;
       setFieldErrors({
-        email: tree.email?._errors?.[0] ?? "",
-        password: tree.password?._errors?.[0] ?? "",
+        email: flat.email?.[0] ?? "",
+        password: flat.password?.[0] ?? "",
       })
       return
     }

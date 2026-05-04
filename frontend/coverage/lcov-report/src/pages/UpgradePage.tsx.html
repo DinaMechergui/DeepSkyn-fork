@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">99.21% </span>
+                <span class="strong">99.23% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>380/383</span>
+                <span class='fraction'>387/390</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">78% </span>
+                <span class="strong">78.43% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>39/50</span>
+                <span class='fraction'>40/51</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">99.21% </span>
+                <span class="strong">99.23% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>380/383</span>
+                <span class='fraction'>387/390</span>
             </div>
         
             
@@ -532,7 +532,15 @@
 <a name='L467'></a><a href='#L467'>467</a>
 <a name='L468'></a><a href='#L468'>468</a>
 <a name='L469'></a><a href='#L469'>469</a>
-<a name='L470'></a><a href='#L470'>470</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L470'></a><a href='#L470'>470</a>
+<a name='L471'></a><a href='#L471'>471</a>
+<a name='L472'></a><a href='#L472'>472</a>
+<a name='L473'></a><a href='#L473'>473</a>
+<a name='L474'></a><a href='#L474'>474</a>
+<a name='L475'></a><a href='#L475'>475</a>
+<a name='L476'></a><a href='#L476'>476</a>
+<a name='L477'></a><a href='#L477'>477</a>
+<a name='L478'></a><a href='#L478'>478</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -951,14 +959,21 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">57x</span>
 <span class="cline-any cline-yes">57x</span>
+<span class="cline-any cline-yes">57x</span>
+<span class="cline-any cline-yes">19x</span>
 <span class="cline-any cline-yes">19x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-yes">38x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">19x</span>
+<span class="cline-any cline-yes">57x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">37x</span>
 <span class="cline-any cline-yes">37x</span>
 <span class="cline-any cline-yes">37x</span>
 <span class="cline-any cline-yes">37x</span>
@@ -966,6 +981,7 @@
 <span class="cline-any cline-yes">37x</span>
 <span class="cline-any cline-yes">37x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">57x</span>
 <span class="cline-any cline-yes">57x</span>
 <span class="cline-any cline-yes">57x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1391,7 +1407,7 @@ export default function UpgradePage() {
           const c = COLOR_MAP[plan.color];
           const Icon = plan.icon;
           const isCurrent = plan.id === currentPlan;
-          const isLocked = planLevel[plan.id as Plan] &lt;= planLevel[currentPlan];
+          const isLocked = planLevel[plan.id] &lt;= planLevel[currentPlan];
 &nbsp;
           return (
             &lt;div
@@ -1419,22 +1435,30 @@ export default function UpgradePage() {
 &nbsp;
                 {/* CTA Button */}
                 &lt;div className="mt-5"&gt;
-                  {isCurrent ? (
-                    &lt;div className="w-full py-3 rounded-xl bg-slate-100 text-slate-500 font-bold text-sm text-center"&gt;
-                      ✓ Plan Actuel
-                    &lt;/div&gt;
-                  ) : isLocked ? (
-                    &lt;div className="w-full py-3 rounded-xl bg-slate-50 text-slate-300 font-bold text-sm text-center border border-slate-100"&gt;
-                      Non disponible
-                    &lt;/div&gt;
-                  ) : (
-                    &lt;button
-                      onClick={() =&gt; handleUpgradeClick(plan)}
-                      className={`w-full py-3 rounded-xl text-white font-bold text-sm transition-all flex items-center justify-center gap-2 ${c.btn} hover:shadow-lg active:scale-95`}
-                    &gt;
-                      Passer à {plan.name} &lt;ArrowRight size={15} /&gt;
-                    &lt;/button&gt;
-                  )}
+                  {(() =&gt; {
+                    if (isCurrent) {
+                      return (
+                        &lt;div className="w-full py-3 rounded-xl bg-slate-100 text-slate-500 font-bold text-sm text-center"&gt;
+                          ✓ Plan Actuel
+                        &lt;/div&gt;
+                      );
+                    }
+                    if (isLocked) {
+                      return (
+                        &lt;div className="w-full py-3 rounded-xl bg-slate-50 text-slate-300 font-bold text-sm text-center border border-slate-100"&gt;
+                          Non disponible
+                        &lt;/div&gt;
+                      );
+                    }
+                    return (
+                      &lt;button
+                        onClick={() =&gt; handleUpgradeClick(plan)}
+                        className={`w-full py-3 rounded-xl text-white font-bold text-sm transition-all flex items-center justify-center gap-2 ${c.btn} hover:shadow-lg active:scale-95`}
+                      &gt;
+                        Passer à {plan.name} &lt;ArrowRight size={15} /&gt;
+                      &lt;/button&gt;
+                    );
+                  })()}
                 &lt;/div&gt;
               &lt;/div&gt;
 &nbsp;
@@ -1477,7 +1501,7 @@ export default function UpgradePage() {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-05-04T17:46:21.469Z
+                at 2026-05-04T18:03:09.884Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

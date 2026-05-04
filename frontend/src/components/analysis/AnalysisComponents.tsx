@@ -298,6 +298,12 @@ export function ConditionDetailDrawer({ condition, result, onClose }: { conditio
     };
     const severityColor = getSeverityColor(tier);
 
+    const tierLabel = (() => {
+        if (tier === 'excellent') return t('analysis.optimal');
+        if (tier === 'moderate') return t('analysis.moderate');
+        return t('analysis.critical');
+    })();
+
     const getDynamicDescription = () => {
         if (result.totalDetections === 0) return t('analysis.no_detection_summary', { condition: meta.label.toLowerCase() });
         if (tier === 'excellent') return `${baseDetails.detailedDescription} ${t('analysis.desc_excellent')}`;
@@ -326,7 +332,7 @@ export function ConditionDetailDrawer({ condition, result, onClose }: { conditio
                             <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: '#1e293b' }}>{meta.label}</h3>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
                                 <span style={{ fontSize: 11, fontWeight: 800, color: severityColor, textTransform: 'uppercase' }}>
-                                    {tier === 'excellent' ? t('analysis.optimal') : tier === 'moderate' ? t('analysis.moderate') : t('analysis.critical')}
+                                    {tierLabel}
                                 </span>
                                 <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#cbd5e1' }} />
                                 <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>Score {scoreValue}/100</span>

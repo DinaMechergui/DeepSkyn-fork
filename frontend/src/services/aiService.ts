@@ -67,7 +67,6 @@ class AIService {
       hasFace = true;
     } else if (isGooglePhoto && !isRealPhoto) {
       quality = 0.2;
-      hasFace = false;
     } else if (photoUrl.startsWith('https://')) {
       quality = 0.6;
       hasFace = Math.random() > 0.5;

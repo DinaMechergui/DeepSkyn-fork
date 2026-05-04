@@ -61,7 +61,7 @@ const getCategoryLabel = (idx: number): string => {
 };
 
 export const exportInsightToPdf = (data: any) => {
-    const { insight, score, delta, realAge, skinAge, trendSeries, userCtx, riskLevel, lifestyleFactors, recommendedActions, analysisSummary } = data;
+    const { insight, score, delta, realAge, skinAge, trendSeries, userCtx, riskLevel, recommendedActions, analysisSummary } = data;
     const doc = new jsPDF();
     const now = new Date();
     const fileDate = now.toISOString().slice(0, 10);
@@ -265,7 +265,7 @@ export const exportInsightToPdf = (data: any) => {
 };
 
 export const exportInsightToExcel = async (data: any) => {
-    const { score, delta, realAge, skinAge, trendSeries, userCtx, insight } = data;
+    const { delta, realAge, skinAge, trendSeries, userCtx } = data;
     const now = new Date();
     const fileDate = now.toISOString().slice(0, 10);
     const workbook = new ExcelJS.Workbook();

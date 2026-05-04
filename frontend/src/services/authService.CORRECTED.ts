@@ -288,54 +288,38 @@ export class AuthService {
    * Verify 2FA token
    */
   async verify2FA(token: string): Promise<AuthUser> {
-    try {
-      const response = await this.axiosInstance.post<AuthResponse>('/twofactor/verify', {
-        token,
-      });
+    const response = await this.axiosInstance.post<AuthResponse>('/twofactor/verify', {
+      token,
+    });
 
-      const { accessToken, user, expiresIn } = response.data;
+    const { accessToken, user, expiresIn } = response.data;
 
-      this.setAccessToken(accessToken, expiresIn);
-      this.currentUser = user;
+    this.setAccessToken(accessToken, expiresIn);
+    this.currentUser = user;
 
-      return user;
-    } catch (error) {
-      throw error;
-    }
+    return user;
   }
 
   /**
    * Initialize 2FA
    */
   async initiate2FA(): Promise<{ secret: string; otpauth_url: string }> {
-    try {
-      const response = await this.axiosInstance.post('/twofactor/initiate');
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.axiosInstance.post('/twofactor/initiate');
+    return response.data;
   }
 
   /**
    * Request password reset
    */
   async requestPasswordReset(email: string): Promise<void> {
-    try {
-      await this.axiosInstance.post('/auth/forgot-password', { email });
-    } catch (error) {
-      throw error;
-    }
+    await this.axiosInstance.post('/auth/forgot-password', { email });
   }
 
   /**
    * Reset password with token
    */
   async resetPassword(token: string, newPassword: string): Promise<void> {
-    try {
-      await this.axiosInstance.post('/auth/reset-password', { token, newPassword });
-    } catch (error) {
-      throw error;
-    }
+    await this.axiosInstance.post('/auth/reset-password', { token, newPassword });
   }
 }
 

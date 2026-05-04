@@ -259,42 +259,27 @@ class GoogleRealOAuthService {
 
     const isGooglePhoto = pictureUrl.includes('googleusercontent.com');
 
-    // Base qualities
-    let quality = 0.3;
-    let source = 'unknown';
-    let description = 'Unknown photo source';
-
     const isLikelyAvatar = pictureUrl.includes('ACg8oc');
 
-    if (isGooglePhoto && !isLikelyAvatar) {
-      // Photo Google probablement réelle
-      quality = 0.9;
-      source = 'google_real';
-      description = 'Real Google profile photo';
-    } else if (isGooglePhoto && isLikelyAvatar) {
-      // Avatar Google par défaut
-      quality = 0.2;
-      source = 'google_default';
-      description = 'Default Google profile photo (letter/avatar)';
-    } else if (pictureUrl.startsWith('https://lh3.googleusercontent.com/a/')) {
-      if (pictureUrl.includes('ACg8oc')) {
-        quality = 0.2;
-        source = 'google_avatar';
-        description = 'Google avatar/letter photo';
-      } else {
-        quality = 0.8;
-        source = 'google_high_quality';
-        description = 'High quality Google photo';
+    // Determine photo quality, source and description based on URL pattern
+    const { quality, source, description } = (() => {
+      if (isGooglePhoto && !isLikelyAvatar) {
+        return { quality: 0.9, source: 'google_real', description: 'Real Google profile photo' };
       }
-    } else if (pictureUrl.startsWith('https://')) {
-      quality = 0.6;
-      source = 'external_https';
-      description = 'External HTTPS photo';
-    } else {
-      quality = 0.3;
-      source = 'other';
-      description = 'Other photo source';
-    }
+      if (isGooglePhoto && isLikelyAvatar) {
+        return { quality: 0.2, source: 'google_default', description: 'Default Google profile photo (letter/avatar)' };
+      }
+      if (pictureUrl.startsWith('https://lh3.googleusercontent.com/a/')) {
+        if (pictureUrl.includes('ACg8oc')) {
+          return { quality: 0.2, source: 'google_avatar', description: 'Google avatar/letter photo' };
+        }
+        return { quality: 0.8, source: 'google_high_quality', description: 'High quality Google photo' };
+      }
+      if (pictureUrl.startsWith('https://')) {
+        return { quality: 0.6, source: 'external_https', description: 'External HTTPS photo' };
+      }
+      return { quality: 0.3, source: 'other', description: 'Other photo source' };
+    })();
 
     return {
       hasRealPhoto: isGooglePhoto && !isLikelyAvatar,

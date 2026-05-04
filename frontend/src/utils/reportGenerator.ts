@@ -235,9 +235,15 @@ export const generateClinicalReport = async (data: any) => {
   // --- SECTION 2: CLINICAL ANALYSIS ---
   y = drawSectionTitle(doc, y, 'Clinical Analysis Results');
   const conditionScores = getConditionScores(analysis, routine);
+  const getStatusLabel = (s: number) => {
+    if (s > 70) return 'CRITICAL';
+    if (s > 40) return 'MODERATE';
+    return 'OPTIMAL';
+  };
+
   const analysisTable = conditionScores.map((c: any) => {
     const score = c.score || 0;
-    const status = score > 70 ? 'CRITICAL' : (score > 40 ? 'MODERATE' : 'OPTIMAL');
+    const status = getStatusLabel(score);
     return [
       c.type.charAt(0).toUpperCase() + c.type.slice(1),
       `${Math.round(score)}%`,
@@ -289,7 +295,7 @@ export const generateClinicalReport = async (data: any) => {
     "Consistency: Visible clinical improvements require 4-6 weeks.",
     "Barrier Health: Avoid over-exfoliation."
   ];
-  y = drawExpertAdvice(doc, y, advice);
+  drawExpertAdvice(doc, y, advice);
 
   drawFooter(doc);
   doc.save(`DeepSkyn_Clinical_Report_${new Date().toISOString().substring(0, 10)}.pdf`);
