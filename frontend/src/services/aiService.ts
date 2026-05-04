@@ -120,10 +120,12 @@ class AIService {
         trustScore -= 0.15;
       }
 
-      // Vérifier format email (protection ReDoS avec limite de longueur)
-      if (email.length < 255) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (emailRegex.test(email)) trustScore += 0.1;
+      // Vérifier format email sans Regex pour éviter ReDoS
+      if (email.length < 255 && email.includes('@') && email.includes('.')) {
+        const parts = email.split('@');
+        if (parts.length === 2 && parts[1].includes('.')) {
+          trustScore += 0.1;
+        }
       }
 
       // Pénaliser les emails suspects

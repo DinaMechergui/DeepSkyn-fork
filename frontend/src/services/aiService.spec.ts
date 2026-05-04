@@ -15,11 +15,14 @@ describe('AIService', () => {
     });
 
     it('should analyze a non-google photo url', async () => {
-      vi.spyOn(Math, 'random').mockReturnValue(0.6);
+      const cryptoSpy = vi.spyOn(window.crypto, 'getRandomValues').mockImplementation((arr: any) => {
+        arr[0] = 200; // > 127
+        return arr;
+      });
       const result = await aiService.analyzePhoto('https://other.com/photo.jpg');
       expect(result.quality).toBe(0.6);
       expect(result.hasFace).toBe(true);
-      vi.restoreAllMocks();
+      cryptoSpy.mockRestore();
     });
 
     it('should handle google photo with small file size (avatar)', async () => {
@@ -78,7 +81,7 @@ describe('AIService', () => {
     });
 
     it('should catch errors in email analysis', () => {
-      const spy = vi.spyOn(RegExp.prototype, 'test').mockImplementationOnce(() => { throw new Error('Regexp Fail'); });
+      const spy = vi.spyOn(String.prototype, 'split').mockImplementationOnce(() => { throw new Error('Split Fail'); });
       const score = aiService.analyzeEmailTrust('test@gmail.com');
       expect(score).toBe(0.3);
       spy.mockRestore();
