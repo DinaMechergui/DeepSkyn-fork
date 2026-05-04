@@ -10,30 +10,71 @@ import type { SvrRoutineResult, SvrRoutineStep, SvrRecommendedProduct } from '..
 import type { UserSkinProfile } from '../../types/aiAnalysis';
 
 import {
-    CAT_META, getCat, normalizeImageUrl, RoutineTabButton
+    getCat, normalizeImageUrl, RoutineTabButton
 } from './RoutineComponents';
 
 /* ─── Dynamic Recommended Product Card ──────────────────────────── */
+/* ─── Sub-components for RecommendedCard ─── */
+function CardBadge({ rank, cat }: { rank: number; cat: any }) {
+  const isTop = rank <= 2;
+  return (
+    <div style={{
+      position: 'absolute', top: 16, right: 16,
+      padding: '4px 10px', borderRadius: 12,
+      background: isTop ? 'rgba(13,148,136,0.1)' : 'rgba(100,116,139,0.1)',
+      color: isTop ? '#0d9488' : '#64748b',
+      fontWeight: 800, fontSize: 10,
+      zIndex: 10, backdropFilter: 'blur(4px)',
+      border: `1px solid ${isTop ? 'rgba(13,148,136,0.2)' : 'rgba(100,116,139,0.2)'}`
+    }}>
+      TOP {rank}
+    </div>
+  );
+}
+
+function ProductImageArea({ imageUrl, product, cat, failedImg, setFailedImg }: any) {
+  const hasValidImg = imageUrl && !failedImg;
+  return (
+    <div style={{
+      height: hasValidImg ? 200 : 80,
+      width: '100%',
+      background: `linear-gradient(135deg, ${cat.bg} 0%, ${cat.color}08 100%)`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      overflow: 'hidden', padding: hasValidImg ? '16px' : '12px',
+      position: 'relative'
+    }}>
+      {hasValidImg ? (
+        <img
+          src={imageUrl}
+          alt={product.name}
+          style={{ height: '100%', width: 'auto', maxWidth: '90%', objectFit: 'contain' }}
+          onError={() => setFailedImg(true)}
+        />
+      ) : (
+        <div style={{ textAlign: 'center', color: cat.color, opacity: 0.2 }}>
+          <Droplets size={failedImg ? 32 : 24} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RecommendedCard({ product, rank }: { product: SvrRecommendedProduct; rank: number }) {
   const { t } = useTranslation();
   const [showReason, setShowReason] = useState(false);
   const [failedImg, setFailedImg] = useState(false);
   const cat = getCat(product.category);
   const imageUrl = normalizeImageUrl(product.imageUrl);
+  const hasValidImg = imageUrl && !failedImg;
 
   return (
     <div
       style={{
-        background: '#fff',
-        border: '1px solid #e2e8f0',
-        borderRadius: 24,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
+        background: '#fff', border: '1px solid #e2e8f0', borderRadius: 24,
+        overflow: 'hidden', display: 'flex', flexDirection: 'column',
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)',
-        position: 'relative',
-        minHeight: imageUrl && !failedImg ? 420 : 300, // Card plus grande quand il y a une image
+        position: 'relative', minHeight: hasValidImg ? 420 : 300,
       }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLDivElement;
@@ -48,44 +89,10 @@ function RecommendedCard({ product, rank }: { product: SvrRecommendedProduct; ra
         el.style.borderColor = '#e2e8f0';
       }}
     >
-      {/* Rank badge */}
-      <div style={{
-        position: 'absolute', top: 16, right: 16,
-        padding: '4px 10px', borderRadius: 12,
-        background: rank <= 2 ? 'rgba(13,148,136,0.1)' : 'rgba(100,116,139,0.1)',
-        color: rank <= 2 ? '#0d9488' : '#64748b',
-        fontWeight: 800, fontSize: 10,
-        zIndex: 10, backdropFilter: 'blur(4px)',
-        border: `1px solid ${rank <= 2 ? 'rgba(13,148,136,0.2)' : 'rgba(100,116,139,0.2)'}`
-      }}>
-        TOP {rank}
-      </div>
-
-      {/* Product Image Area - Responsive height */}
-      <div style={{
-        height: imageUrl && !failedImg ? 200 : 80, // Plus grand pour l'image, discret sinon
-        width: '100%',
-        background: `linear-gradient(135deg, ${cat.bg} 0%, ${cat.color}08 100%)`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        overflow: 'hidden', padding: imageUrl && !failedImg ? '16px' : '12px',
-        position: 'relative'
-      }}>
-        {imageUrl && !failedImg ? (
-          <img
-            src={imageUrl}
-            alt={product.name}
-            style={{ height: '100%', width: 'auto', maxWidth: '90%', objectFit: 'contain' }}
-            onError={() => setFailedImg(true)}
-          />
-        ) : (
-          <div style={{ textAlign: 'center', color: cat.color, opacity: 0.2 }}>
-            <Droplets size={failedImg ? 32 : 24} />
-          </div>
-        )}
-      </div>
+      <CardBadge rank={rank} cat={cat} />
+      <ProductImageArea imageUrl={imageUrl} product={product} cat={cat} failedImg={failedImg} setFailedImg={setFailedImg} />
 
       <div style={{ padding: '16px', flex: 1, background: '#fff', display: 'flex', flexDirection: 'column' }}>
-        {/* Category & Texture */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
           <span style={{
             fontSize: 9, fontWeight: 800, color: cat.color,
@@ -94,47 +101,22 @@ function RecommendedCard({ product, rank }: { product: SvrRecommendedProduct; ra
           }}>
             {t(`svr_routine.categories.${product.category}`, { defaultValue: cat.label })}
           </span>
-          {product.texture && (
-            <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>
-              • {product.texture}
-            </span>
-          )}
+          {product.texture && <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>• {product.texture}</span>}
         </div>
 
-        {/* Name - Bigger and bolder */}
-        <div style={{
-          fontSize: 15,
-          fontWeight: 800,
-          color: '#0f172a',
-          lineHeight: 1.2,
-          marginBottom: 12,
-          minHeight: '2.4em',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden'
-        }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', lineHeight: 1.2, marginBottom: 12, minHeight: '2.4em', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {product.name}
         </div>
 
-        {/* Benefits & Ingredients - Only if image exists for cleaner compact look */}
-        {(imageUrl && !failedImg) && (
+        {hasValidImg && (
           <>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              marginBottom: 12, color: cat.color
-            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, color: cat.color }}>
               <Zap size={14} fill={cat.color} style={{ opacity: 0.2 }} />
               <span style={{ fontSize: 12, fontWeight: 700 }}>{product.skinBenefit}</span>
             </div>
-
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
               {product.keyIngredients?.slice(0, 2).map((ing) => (
-                <div key={`${product.name}-${ing}`} style={{
-                  fontSize: 10, fontWeight: 700, padding: '4px 10px',
-                  borderRadius: 10, background: 'rgba(12, 148, 136, 0.05)',
-                  color: '#0d9488', border: '1px solid rgba(12, 148, 136, 0.1)',
-                }}>
+                <div key={`${product.name}-${ing}`} style={{ fontSize: 10, fontWeight: 700, padding: '4px 10px', borderRadius: 10, background: 'rgba(12, 148, 136, 0.05)', color: '#0d9488', border: '1px solid rgba(12, 148, 136, 0.1)' }}>
                   {ing}
                 </div>
               ))}
@@ -143,7 +125,6 @@ function RecommendedCard({ product, rank }: { product: SvrRecommendedProduct; ra
         )}
 
         <div style={{ marginTop: 'auto' }}>
-          {/* AI reason action */}
           <button
             onClick={() => setShowReason(v => !v)}
             style={{
@@ -159,45 +140,20 @@ function RecommendedCard({ product, rank }: { product: SvrRecommendedProduct; ra
             {showReason ? t('svr_routine.reduce', { defaultValue: 'Réduire' }) : t('svr_routine.ai_analysis', { defaultValue: 'Analyse IA' })}
             {showReason ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
-
           {showReason && (
-            <div className="fade-in" style={{
-              marginTop: 12,
-              padding: '14px',
-              background: 'white',
-              border: `1px solid ${cat.color}15`,
-              borderRadius: 16,
-              fontSize: 12, color: '#334155', lineHeight: 1.6,
-              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
-            }}>
+            <div className="fade-in" style={{ marginTop: 12, padding: '14px', background: 'white', border: `1px solid ${cat.color}15`, borderRadius: 16, fontSize: 12, color: '#334155', lineHeight: 1.6, boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
               {product.reason}
             </div>
           )}
         </div>
       </div>
 
-      {/* Footer Rating */}
-      <div style={{
-        padding: '12px 16px',
-        borderTop: '1px solid #f1f5f9',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: '#fcfcfd'
-      }}>
+      <div style={{ padding: '12px 16px', borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fcfcfd' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Star size={14} fill="#f59e0b" color="#f59e0b" />
-          <span style={{ fontSize: 13, fontWeight: 800, color: '#1e293b' }}>
-            {(product.score ?? 8).toFixed(1)}
-          </span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: '#1e293b' }}>{(product.score ?? 8).toFixed(1)}</span>
         </div>
-        <a
-          href={product.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            fontSize: 11, fontWeight: 800, color: cat.color,
-            textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4
-          }}
-        >
+        <a href={product.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, fontWeight: 800, color: cat.color, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
           {t('svr_routine.details', { defaultValue: 'Détails' })} <ArrowUpRight size={14} />
         </a>
       </div>

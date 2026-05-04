@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
     Sparkles, Zap, AlertCircle, GitCompare,
     CheckCircle, RefreshCw, Activity,
-    BarChart2, Info, Waves, Flame, Microscope,
-    Bandage, CircleDot, HeartPulse,
+    BarChart2, Info,
     CircleCheck, AlertTriangle, BarChart3,
     Upload, X, Download, Volume2, VolumeX,
     Loader2, ArrowUpCircle, Lock, Calendar, FlaskConical,
@@ -53,8 +52,634 @@ function normalizeExternalUrl(url: unknown): string | null {
 }
 
 
-/* ──────────────────────── Main Page ──────────────────────────── */
+/* ─── Sub-components for SkinAnalysisPage ─── */
 
+function AnalysisHeader({ t, result, analysisCount }: any) {
+  return (
+    <div style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+      flexWrap: 'wrap', rowGap: 18, marginBottom: 34, padding: '18px 20px',
+      background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+      border: '1px solid #e2e8f0', borderRadius: 20,
+      boxShadow: '0 12px 28px -16px rgba(15,23,42,0.22)'
+    }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'rgba(13,148,136,0.08)', border: '1px solid rgba(13,148,136,0.15)',
+          borderRadius: 99, padding: '5px 12px', width: 'fit-content'
+        }}>
+          <Sparkles size={12} style={{ color: '#0d9488' }} />
+          <span style={{ fontSize: 10, color: '#0d9488', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            {t('analysis.ai_engine_tag')}
+          </span>
+        </div>
+        <h1 style={{
+          fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 900,
+          color: '#0f172a', margin: 0, lineHeight: 1.05, letterSpacing: '-0.02em'
+        }}>
+          {t('analysis.title')}
+        </h1>
+        <p style={{ color: '#64748b', fontSize: 15, margin: 0 }}>
+          {t('analysis.subtitle')}
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        {result && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 6, backgroundColor: '#f0fdf4',
+            padding: '8px 16px', borderRadius: '12px', border: '1px solid #dcfce7', marginRight: 8
+          }}>
+            <div className="pulse-dot" style={{ width: 6, height: 6 }} />
+            <span style={{ fontSize: 12, color: '#10b981', fontWeight: 600 }}>
+              {analysisCount} {analysisCount > 1 ? t('analysis.detections_analyzed_plural') : t('analysis.detections_analyzed_singular')}
+            </span>
+          </div>
+        )}
+        <Link
+          to="/analysis/compare"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '8px',
+            background: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
+            color: 'white', padding: '11px 20px', borderRadius: '13px',
+            fontSize: '14px', fontWeight: '700', textDecoration: 'none',
+            boxShadow: '0 12px 22px -14px rgba(13,148,136,0.75)', transition: 'all 0.2s'
+          }}
+        >
+          <GitCompare size={16} /> {t('common.compare') || 'Comparer'}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function ImageUploadArea({ profile, loading, t, fileInputRef, handleImageUpload, removeImage, scanPhase, scanLabels }: any) {
+  const hasPhoto = Boolean(profile.imagesBase64 && profile.imagesBase64.length > 0);
+  return (
+    <div className="glass-card" style={{ padding: 32 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h2 style={{ fontSize: 13, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>
+          {t('analysis.profile.add_photos')}
+        </h2>
+        <span style={{ fontSize: 11, fontWeight: 700, color: (profile.imagesBase64?.length || 0) >= 5 ? '#ef4444' : '#0d9488', backgroundColor: (profile.imagesBase64?.length || 0) >= 5 ? '#fef2f2' : '#f0fdf4', padding: '4px 12px', borderRadius: '99px' }}>
+          {t('analysis.profile.images_count', { count: profile.imagesBase64?.length || 0 })}
+        </span>
+      </div>
+
+      <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" multiple className="hidden" />
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 16 }}>
+        {profile.imagesBase64?.map((img: string, idx: number) => (
+          <div key={`img-${idx}`} style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', height: 160, border: '2px solid #e2e8f0', boxShadow: '0 8px 16px rgba(0,0,0,0.12)', transition: 'all 0.3s' }}>
+            <img src={img} alt={`Preview ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <button
+              onClick={() => removeImage(idx)}
+              className="absolute top-2 right-2 p-2 bg-white/95 backdrop-blur-sm rounded-full text-red-500 shadow-lg hover:bg-red-50 transition-all hover:scale-110"
+              type="button"
+            >
+              <X size={16} />
+            </button>
+            {idx === 0 && (
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(13,148,136,0.9), transparent)', color: 'white', fontSize: '11px', textAlign: 'center', fontWeight: 'bold', padding: '8px 4px' }}>
+                {t('analysis.profile.main_photo')}
+              </div>
+            )}
+          </div>
+        ))}
+
+        {(profile.imagesBase64?.length || 0) < 5 && (
+          <button
+            type="button" onClick={() => fileInputRef.current?.click()} disabled={loading}
+            style={{
+              height: 160, background: 'linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%)',
+              border: '3px dashed #0d9488', borderRadius: 16, display: 'flex',
+              flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              gap: 12, transition: 'all 0.3s', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1
+            }}
+          >
+            <Upload size={32} style={{ color: '#0d9488' }} strokeWidth={1.5} />
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#0d9488', display: 'block' }}>{t('analysis.profile.add_a_photo')}</span>
+              <span style={{ fontSize: 11, color: '#64748b', marginTop: 4, display: 'block' }}>{t('analysis.profile.or_drag_drop')}</span>
+            </div>
+          </button>
+        )}
+      </div>
+
+      {loading && (
+        <div className="mt-4 text-sm text-teal-700 font-semibold flex items-center gap-2">
+          <RefreshCw size={14} className="animate-spin" />
+          {scanLabels[scanPhase]}
+        </div>
+      )}
+
+      {hasPhoto && !loading && (
+        <div className="mt-4 p-3 bg-teal-50 border border-teal-100 rounded-xl flex items-center gap-2">
+          <CheckCircle size={14} className="text-teal-500" />
+          <span className="text-[11px] font-bold text-teal-700 uppercase tracking-widest">
+            {t('analysis.profile.photos_ready')}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ErrorDisplay({ error, t, navigate }: any) {
+  if (!error) return null;
+  const isLimit = error.includes('LIMIT_REACHED');
+  const isNoFace = error.includes('visage humain');
+  const isWarning = isLimit || isNoFace;
+
+  return (
+    <div style={{
+      background: isWarning ? 'rgba(245,158,11,0.08)' : 'rgba(239,68,68,0.08)',
+      border: isWarning ? '1px solid rgba(245,158,11,0.2)' : '1px solid rgba(239,68,68,0.2)',
+      borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start'
+    }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <AlertCircle size={18} style={{ color: isWarning ? '#f59e0b' : '#ef4444', flexShrink: 0 }} />
+        <p style={{ fontSize: 13, fontWeight: 700, color: isWarning ? '#b45309' : '#b91c1c', margin: 0 }}>
+          {isLimit ? 'Limite mensuelle atteinte' : isNoFace ? 'Image non reconnue' : 'Erreur d\'analyse'}
+        </p>
+      </div>
+      <p style={{ fontSize: 12, color: isWarning ? '#92400e' : '#fca5a5', lineHeight: 1.5, margin: 0 }}>
+        {isLimit ? 'Vous avez atteint le nombre maximal d\'analyses pour votre plan actuel ce mois-ci.' : error}
+      </p>
+      {isLimit && (
+        <Link
+          to="/upgrade"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            backgroundColor: '#f59e0b', color: 'white',
+            padding: '8px 16px', borderRadius: '10px',
+            fontSize: '12px', fontWeight: '700', textDecoration: 'none',
+            boxShadow: '0 4px 12px rgba(245,158,11,0.3)', transition: 'all 0.2s'
+          }}
+        >
+          <ArrowUpCircle size={14} /> Passer au plan supérieur
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function ScoreOverviewCard({ result, profile, CONDITION_META, t }: any) {
+  return (
+    <div className="glass-card" style={{
+      padding: 32,
+      background: `linear-gradient(135deg, rgba(13,148,136,0.05) 0%, rgba(8,145,178,0.03) 100%)`,
+      border: '1.5px solid rgba(13,148,136,0.2)',
+      borderRadius: '24px'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+        <h2 style={{ fontSize: 14, fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.15em', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Zap size={18} style={{ color: '#f59e0b' }} /> {t('analysis.health_score_title')}
+        </h2>
+        <CheckCircle size={16} style={{ color: '#10b981' }} />
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+        <ScoreRing score={result.globalScore} size={130} />
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, marginBottom: 12 }}>
+            <div style={{ padding: '8px 10px', borderRadius: 10, background: '#ecfeff', border: '1px solid #bae6fd' }}>
+              <div style={{ fontSize: 10, color: '#0f766e', fontWeight: 700, textTransform: 'uppercase' }}>{t('analysis.real_age')}</div>
+              <div style={{ fontSize: 14, color: '#0f172a', fontWeight: 800 }}>{profile.age}</div>
+            </div>
+            <div style={{ padding: '8px 10px', borderRadius: 10, background: '#f0fdfa', border: '1px solid #99f6e4' }}>
+              <div style={{ fontSize: 10, color: '#0f766e', fontWeight: 700, textTransform: 'uppercase' }}>{t('analysis.skin_age_ia')}</div>
+              <div style={{ fontSize: 14, color: '#0f172a', fontWeight: 800 }}>{typeof result.skinAge === 'number' ? result.skinAge : 'N/A'}</div>
+            </div>
+          </div>
+
+          {[
+            { label: t('analysis.best'), value: result.analysis.bestCondition, color: '#10b981', Icon: CircleCheck },
+            { label: t('analysis.critical_point'), value: result.analysis.worstCondition, color: '#ef4444', Icon: AlertTriangle },
+            { label: t('analysis.dominant'), value: result.analysis.dominantCondition, color: '#f59e0b', Icon: BarChart3 },
+          ].map(({ label, value, color, Icon }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <span style={{ fontSize: 12, color: '#64748b', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Icon size={14} style={{ color, flexShrink: 0 }} />
+                {label}
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 700, color }}>
+                {value ? (CONDITION_META[value]?.label || value) : 'N/A'}
+              </span>
+            </div>
+          ))}
+
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #f1f5f9', display: 'center', alignItems: 'center', gap: 6 }}>
+            <BarChart2 size={12} style={{ color: '#94a3b8' }} />
+            <span style={{ fontSize: 11, color: '#94a3b8' }}>
+              {result.totalDetections} {result.totalDetections > 1 ? t('analysis.detections_analyzed_plural') : t('analysis.detections_analyzed_singular')}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AnalysisActionButtons({ exportToCSV, exportToPDF, speakAnalysis, isSpeaking, t }: any) {
+  return (
+    <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(13,148,136,0.1)', display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+      <button onClick={exportToCSV} className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm active:scale-95">
+        <Download size={14} className="text-teal-600" />
+        {t('analysis.export_csv')}
+      </button>
+      <button onClick={exportToPDF} className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 border border-teal-700 rounded-xl text-xs font-bold text-white hover:bg-teal-700 transition-all shadow-md active:scale-95">
+        <Download size={14} />
+        {t('analysis.export_pdf')}
+      </button>
+      <button onClick={speakAnalysis} className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 ${isSpeaking ? 'bg-red-50 border border-red-100 text-red-600' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+        {isSpeaking ? <VolumeX size={14} /> : <Volume2 size={14} className="text-orange-500" />}
+        {isSpeaking ? t('analysis.stop_listening') : t('analysis.listen_analysis')}
+      </button>
+    </div>
+  );
+}
+
+function InsightsSection({ result, BLEND_LABELS, t, hasPhoto, displayMetaWeighting, sortedConditions, setSelectedCondition }: any) {
+  return (
+    <div className="glass-card" style={{ padding: 32, borderRadius: '24px' }}>
+      <h2 style={{ fontSize: 14, fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <BarChart3 size={18} style={{ color: '#0ea5e9' }} /> {t('analysis.scores_by_condition')}
+      </h2>
+      {result.combinedInsights && (
+        <div style={{ marginBottom: 20, padding: 16, borderRadius: 12, border: '1px dashed #bae6fd', background: 'linear-gradient(135deg, #ecfeff, #f8fafc)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 14 }}>{t('analysis.fusion_photo_questionnaire')}</div>
+            <div style={{ fontSize: 11, color: '#0ea5e9', fontWeight: 700 }}>
+              {Math.round((displayMetaWeighting.aiWeight ?? 0) * 100)}% {t('analysis.ai_photo')} · {Math.round((displayMetaWeighting.userWeight ?? 0) * 100)}% {t('analysis.you')}
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+            {Object.entries(result.combinedInsights).map(([key, entry]: [string, any]) => {
+              const meta = BLEND_LABELS[key];
+              if (!meta) return null;
+              return (
+                <div key={key} style={{ padding: 12, borderRadius: 10, background: '#fff', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>{meta.label}</div>
+                  <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 6 }}>{meta.helper}</div>
+                  {hasPhoto && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#0f172a' }}>
+                      <span>{t('analysis.ai_photo')}</span>
+                      <span>{entry.aiScore ?? '—'}</span>
+                    </div>
+                  )}
+                  {entry.userScore !== undefined && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#0f172a' }}>
+                      <span>{t('analysis.you')}</span>
+                      <span>{entry.userScore}</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 800, color: '#0ea5e9', marginTop: 6 }}>
+                    <span>{t('analysis.fusion')}</span>
+                    <span>{Math.round(entry.combinedScore)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {!hasPhoto && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 8 }}>{t('analysis.no_selfie_provided')} · {t('analysis.fusion_based_on')}</div>}
+        </div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {sortedConditions.map((condition: any) => (
+          <ConditionBar key={condition.type} condition={condition} onSelect={setSelectedCondition} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AISummaryCard({ result, currentPlan, buildAnalysisSummary, t, navigate }: any) {
+  return (
+    <div className={`p-10 rounded-28px shadow-2xl text-white relative overflow-hidden group ${currentPlan === 'FREE' ? 'bg-gradient-to-br from-slate-700 to-slate-800 shadow-slate-600/25 border-2 border-slate-600' : 'bg-gradient-to-br from-[#0d9488] to-[#0f766e] shadow-teal-500/30 border border-teal-400'}`} style={{ borderRadius: '28px' }}>
+      {currentPlan === 'FREE' && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 bg-gradient-to-t from-slate-900/90 via-slate-800/60 to-transparent">
+          <div className="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mb-4 border-2 border-amber-400">
+            <Lock size={28} className="text-amber-300" />
+          </div>
+          <h3 className="text-lg font-black text-white mb-2">{t('analysis.deep_analysis')}</h3>
+          <p className="text-xs text-slate-300 text-center max-w-[220px] mb-4">{t('analysis.unlock_analysis_desc')}</p>
+          <button onClick={() => navigate('/upgrade')} className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg font-bold text-xs shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-105 transition-all">
+            {t('analysis.unlock_button')}
+          </button>
+        </div>
+      )}
+      {currentPlan !== 'FREE' && <Sparkles className="absolute -right-4 -top-4 w-24 h-24 opacity-10 group-hover:rotate-12 transition-transform" />}
+      <div className={`relative z-10 ${currentPlan === 'FREE' ? 'blur-sm opacity-40' : ''}`}>
+        <h3 className="text-sm font-bold uppercase tracking-widest mb-4 flex items-center gap-2 opacity-80">
+          <CheckCircle size={14} /> {t('analysis.analysis_summary')}
+        </h3>
+        <p className="text-lg font-medium leading-relaxed italic">{buildAnalysisSummary(result)}</p>
+      </div>
+    </div>
+  );
+}
+
+function NavigationSection({ t, navigate, profile }: any) {
+  return (
+    <div id="recommendations-section" className="glass-card p-8 rounded-[28px] border-2 border-teal-100 bg-white/50 backdrop-blur shadow-xl shadow-teal-500/5 mb-6 fade-in">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="bg-teal-100 p-2 rounded-xl text-teal-600"><Sparkles size={20} /></div>
+            <h3 className="text-xl font-black text-slate-800">{t('analysis.ai_personalized_solutions')}</h3>
+          </div>
+          <p className="text-slate-600 text-sm leading-relaxed">{t('analysis.ai_solutions_desc')}</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+          <button onClick={() => navigate('/analysis/recommendations', { state: { profile } })} className="group flex items-center justify-center gap-3 px-8 py-4 bg-white border-2 border-teal-500 text-teal-700 rounded-2xl font-bold transition-all hover:bg-teal-50 hover:shadow-lg active:scale-95">
+            <FlaskConical size={18} className="group-hover:rotate-12 transition-transform" />
+            {t('analysis.view_products')}
+          </button>
+          <button onClick={() => navigate('/routines')} className="group flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-2xl font-bold shadow-xl shadow-teal-600/20 hover:scale-105 active:scale-95 transition-all">
+            <Calendar size={18} />
+            {t('analysis.my_ia_routine')}
+            <ArrowUpCircle size={16} className="rotate-45" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProgressSection({ currentPlan, t, timelineError, timelineLoading, timelineData, navigate }: any) {
+  return (
+    <div id="history-section" className="glass-card fade-in relative overflow-hidden border-2" style={{ padding: 24, minHeight: 400, borderColor: currentPlan === 'FREE' ? '#f59e0b33' : '#e2e8f0' }}>
+      {currentPlan === 'FREE' && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 bg-gradient-to-br from-white/80 via-amber-50/60 to-white/80 backdrop-blur-sm border-t-2 border-amber-200">
+          <div className="w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-50 rounded-full flex items-center justify-center mb-3 border-2 border-amber-300 shadow-lg shadow-amber-200/50">
+            <Lock size={32} className="text-amber-600" />
+          </div>
+          <h3 className="text-xl font-black text-amber-900 mb-2">{t('analysis.progress_tracking')}</h3>
+          <p className="text-slate-700 text-sm text-center max-w-[260px] mb-6 leading-relaxed">{t('analysis.progress_tracking_desc')}</p>
+          <Link to="/upgrade" className="px-7 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-105 transition-all" style={{ textDecoration: 'none' }}>
+            {t('analysis.unlock_tracking')}
+          </Link>
+        </div>
+      )}
+      <div className={currentPlan === 'FREE' ? 'opacity-20 pointer-events-none' : ''}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <BarChart2 className="text-teal-600" size={20} />
+            <h2 style={{ fontSize: 16, fontWeight: 800, color: '#1e293b', margin: 0 }}>{t('analysis.progress_tracking')}</h2>
+          </div>
+        </div>
+        {timelineError && <div style={{ padding: 12, borderRadius: 12, border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)', color: '#dc2626', fontSize: 12, fontWeight: 700 }}>{timelineError}</div>}
+        <div style={{ marginTop: 8 }}>
+          {timelineLoading ? (
+            <div className="h-48 w-full bg-slate-50 rounded-2xl border border-dashed border-slate-200 flex items-center justify-center">
+              <Loader2 className="animate-spin text-slate-400" size={28} />
+            </div>
+          ) : (
+            <TimelineView data={timelineData} height={260} showTitle={false} />
+          )}
+        </div>
+        <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+          <Link to="/history" className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm active:scale-95" style={{ textDecoration: 'none' }}>
+            <BarChart3 size={14} className="text-teal-600" />
+            {t('analysis.view_full_history')}
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PrintableReport({ result, profile, CONDITION_META, t, BLEND_LABELS, displayMetaWeighting, routineResult, routineError, currentPlan, globalScoreColor, i18n, CONDITION_DETAILS }: any) {
+  return (
+    <div id="printable-report" style={{
+      background: 'white', padding: '15mm', width: '100%', maxWidth: '210mm',
+      boxSizing: 'border-box', margin: '0 auto', fontFamily: "'Inter', sans-serif", color: '#1e293b'
+    }}>
+      <style>{`
+        @media print {
+          @page { size: A4; margin: 0; }
+          body { margin: 0; }
+          .page-break { page-break-after: always; }
+          .no-break { page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; }
+        }
+      `}</style>
+
+      {/* Page 1: Executive Summary */}
+      <div className="page-break">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px solid #0d9488', paddingBottom: 25, marginBottom: 40 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ background: '#0d9488', width: 48, height: 48, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', boxShadow: '0 4px 12px rgba(13,148,136,0.2)' }}>
+              <Sparkles size={28} />
+            </div>
+            <div>
+              <h1 style={{ fontSize: 32, fontWeight: 900, color: '#0d9488', margin: 0, letterSpacing: '-0.04em' }}>DEEPSKYN PRO</h1>
+              <p style={{ margin: 0, color: '#64748b', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{t('analysis.pdf.ai_expertise', { defaultValue: 'Intelligence Artificielle Dermatologique' })}</p>
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a' }}>{t('analysis.pdf.expert_report', { defaultValue: 'RAPPORT ANALYTIQUE EXPERT' })}</div>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>ID: #{new Date().getTime().toString().slice(-8)}</div>
+            <div style={{ fontSize: 12, color: '#94a3b8' }}>{t('analysis.pdf.generated_on', { defaultValue: 'Généré le' })} {new Date().toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : i18n.language === 'en' ? 'en-US' : 'fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: 30, marginBottom: 40 }}>
+          <div style={{ background: '#f8fafc', padding: 35, borderRadius: 24, border: '1px solid #e2e8f0', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: 20, letterSpacing: '0.05em' }}>{t('analysis.health_score_title')}</div>
+            <div style={{ fontSize: 80, fontWeight: 900, color: globalScoreColor, lineHeight: 1, letterSpacing: '-0.05em' }}>{Math.round(result.globalScore)}<span style={{ fontSize: 24, color: '#94a3b8' }}>/100</span></div>
+            <div style={{ marginTop: 20, padding: '8px 20px', borderRadius: 99, display: 'inline-block', background: `${globalScoreColor}15`, color: globalScoreColor, fontSize: 16, fontWeight: 800, textTransform: 'uppercase' }}>
+              {result.globalScore >= 75 ? t('analysis.optimal') : result.globalScore >= 50 ? t('analysis.moderate') : t('analysis.critical')}
+            </div>
+            <div style={{ borderTop: '1px solid #e2e8f0', marginTop: 30, paddingTop: 20, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span style={{ color: '#64748b', fontWeight: 600 }}>{t('analysis.profile.age')}:</span>
+                <span style={{ fontWeight: 800, color: '#1e293b' }}>{profile.age} {t('analysis.pdf.years', { defaultValue: 'ans' })}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span style={{ color: '#64748b', fontWeight: 600 }}>{t('analysis.profile.skin_type')}:</span>
+                <span style={{ fontWeight: 800, color: '#1e293b' }}>{t(`analysis.profile.skin_types.${profile.skinType}`) || profile.skinType}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span style={{ color: '#64748b', fontWeight: 600 }}>{t('analysis.pdf.ai_detections', { defaultValue: 'Detections IA' })}:</span>
+                <span style={{ fontWeight: 800, color: '#1e293b' }}>{result.totalDetections} {t('analysis.pdf.points', { defaultValue: 'points' })}</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Activity size={18} color="#0d9488" /> Diagnostic de Synthèse
+            </h2>
+            <p style={{ fontSize: 15, color: '#334155', lineHeight: 1.8, marginBottom: 25, textAlign: 'justify' }}>
+              {currentPlan === 'FREE'
+                ? t('analysis.pdf.free_plan_message', { defaultValue: 'Le diagnostic expert approfondi est réservé aux membres PRO. Ce rapport interactif présente une synthèse de votre état cutané actuel basée sur notre moteur IA multi-spectre.' })
+                : t('analysis.pdf.pro_summary_template', {
+                  best: result.analysis.bestCondition ? (CONDITION_META[result.analysis.bestCondition]?.label || result.analysis.bestCondition) : 'N/A',
+                  worst: result.analysis.worstCondition ? (CONDITION_META[result.analysis.worstCondition]?.label || result.analysis.worstCondition) : 'N/A',
+                  score: Math.round(result.globalScore),
+                  defaultValue: `L'analyse automatisée de votre profil cutané met en évidence une performance optimale sur la condition ${result.analysis.bestCondition ? (CONDITION_META[result.analysis.bestCondition]?.label || result.analysis.bestCondition) : 'N/A'}. À l'inverse, l'aspect ${result.analysis.worstCondition ? (CONDITION_META[result.analysis.worstCondition]?.label || result.analysis.worstCondition) : 'N/A'} constitue votre priorité dermatologique actuelle. L'équilibre global de votre barrière est évalué à ${Math.round(result.globalScore)}/100.`
+                })
+              }
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+              <div style={{ padding: 20, borderRadius: 20, background: '#f0fdf4', border: '1px solid #dcfce7' }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: '#10b981', textTransform: 'uppercase', marginBottom: 8 }}>{t('analysis.pdf.strength_point', { defaultValue: 'Point de Force' })}</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: '#065f46' }}>{result.analysis.bestCondition ? (CONDITION_META[result.analysis.bestCondition]?.label || result.analysis.bestCondition) : t('analysis.pdf.stable', { defaultValue: 'Stable' })}</div>
+              </div>
+              <div style={{ padding: 20, borderRadius: 20, background: '#fef2f2', border: '1px solid #fee2e2' }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: '#ef4444', textTransform: 'uppercase', marginBottom: 8 }}>{t('analysis.pdf.priority_axis', { defaultValue: 'Axe Prioritaire' })}</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: '#991b1b' }}>{result.analysis.worstCondition ? (CONDITION_META[result.analysis.worstCondition]?.label || result.analysis.worstCondition) : t('analysis.pdf.none', { defaultValue: 'Aucun' })}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 20 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 20, paddingLeft: 14, borderLeft: '5px solid #0d9488' }}>{t('analysis.pdf.detailed_analysis', { defaultValue: 'Analyse Détaillée des Conditions' })}</h2>
+          <div style={{ display: 'block' }}>
+            {result.conditionScores.slice(0, 4).map((c: any) => {
+              const meta = CONDITION_META[c.type];
+              const details = CONDITION_DETAILS[c.type];
+              const scoreValue = typeof c.score === 'number' ? c.score : 0;
+              const color = scoreValue >= 75 ? '#10b981' : scoreValue >= 50 ? '#f59e0b' : '#ef4444';
+              return (
+                <div key={c.type} className="no-break" style={{ padding: 22, borderRadius: 20, border: '1px solid #f1f5f9', background: '#fff', marginBottom: 15, display: 'inline-block', width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>
+                        {meta?.icon ? <meta.icon size={20} /> : <Activity size={20} />}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 16, fontWeight: 900, color: '#1e293b' }}>{meta?.label || c.type}</div>
+                        <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>{meta?.description}</div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 24, fontWeight: 900, color }}>{typeof c.score === 'number' ? `${Math.round(c.score)}/100` : '—'}</div>
+                      <div style={{ fontSize: 10, fontWeight: 800, color, textTransform: 'uppercase' }}>{t('analysis.pdf.expert_score', { defaultValue: 'Expert Score' })}</div>
+                    </div>
+                  </div>
+                  {details && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 15, paddingTop: 15, borderTop: '1px dashed #e2e8f0' }}>
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: 8 }}>{t('analysis.pdf.probable_causes', { defaultValue: 'Causes Probables' })}</div>
+                        <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                          {details.causes.map((cause: string) => <li key={cause} style={{ fontSize: 12, color: '#64748b', marginBottom: 4, display: 'flex', gap: 6 }}><span style={{ color }}>•</span> {cause}</li>)}
+                        </ul>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: 8 }}>{t('analysis.pdf.care_advice', { defaultValue: 'Conseils de Soins' })}</div>
+                        <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                          {details.careRecommendations.map((reco: string) => <li key={reco} style={{ fontSize: 12, color: '#64748b', marginBottom: 4, display: 'flex', gap: 6 }}><span style={{ color }}>✔</span> {reco}</li>)}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Page 2: Routine */}
+      <div className="page-break" style={{ paddingTop: '10mm' }}>
+        <h2 style={{ fontSize: 22, fontWeight: 900, color: '#0d9488', marginBottom: 30, textAlign: 'center', textTransform: 'uppercase' }}>{t('analysis.pdf.complete_care_strategy', { defaultValue: 'Stratégie de Soins' })}</h2>
+        {currentPlan === 'FREE' ? (
+          <div style={{ padding: 40, textAlign: 'center', color: '#64748b', border: '1px dashed #e2e8f0', borderRadius: 20, background: '#f8fafc' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1e293b' }}>{t('analysis.pdf.upgrade_title')}</h3>
+            {t('analysis.pdf.pro_routine_only')}
+          </div>
+        ) : routineResult ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 35 }}>
+            <div className="no-break" style={{ width: '100%', boxSizing: 'border-box' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, padding: '10px 20px', background: '#f0f9ff', borderRadius: 14 }}>
+                <Sun size={24} color="#0369a1" /> <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0369a1', margin: 0 }}>{t('analysis.pdf.morning_routine')}</h3>
+              </div>
+              {routineResult.morning.map((step: any, i: number) => (
+                <div key={`morning-${i}`} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', marginBottom: 10 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#0369a1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{i + 1}</div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 800 }}>{step.stepName} — <span style={{ color: '#0369a1' }}>{step.product?.name}</span></div>
+                    <div style={{ fontSize: 12, color: '#64748b' }}>{step.instruction}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="no-break" style={{ width: '100%', boxSizing: 'border-box' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, padding: '10px 20px', background: '#f5f3ff', borderRadius: 14 }}>
+                <Moon size={24} color="#5b21b6" /> <h3 style={{ fontSize: 18, fontWeight: 800, color: '#5b21b6', margin: 0 }}>{t('analysis.pdf.night_routine')}</h3>
+              </div>
+              {routineResult.night.map((step: any, i: number) => (
+                <div key={`night-${i}`} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', marginBottom: 10 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#5b21b6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{i + 1}</div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 800 }}>{step.stepName} — <span style={{ color: '#5b21b6' }}>{step.product?.name}</span></div>
+                    <div style={{ fontSize: 12, color: '#64748b' }}>{step.instruction}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ padding: 25, borderRadius: 24, background: 'linear-gradient(135deg, #f0fdfa, #f0f9ff)', border: '1px solid #ccfbf1' }}>
+              <p style={{ margin: 0, fontSize: 14, color: '#134e4a', fontStyle: 'italic' }}>"{routineResult.generalAdvice}"</p>
+            </div>
+          </div>
+        ) : routineError ? (
+          <div style={{ padding: 40, textAlign: 'center', color: '#ef4444' }}>⚠️ {t('analysis.errors.routine_load_fail')}</div>
+        ) : (
+          <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>{t('analysis.routine_generating')}</div>
+        )}
+      </div>
+
+      <div style={{ marginTop: 40, paddingTop: 30, borderTop: '1px solid #e2e8f0', textAlign: 'center' }}>
+        <p style={{ fontSize: 10, color: '#94a3b8' }}>{t('analysis.pdf.footer_disclaimer')}</p>
+        <p style={{ fontSize: 12, fontWeight: 800, color: '#0d9488', marginTop: 15 }}>www.deepskyn.app</p>
+      </div>
+    </div>
+  );
+}
+
+function buildAnalysisSummary(r: GlobalScoreResult | null, t: any, CONDITION_META: any) {
+    if (!r) return '';
+    const evaluated = (r.conditionScores || []).filter(c => c?.evaluated !== false && typeof c?.score === 'number') as ConditionScore[];
+    if (evaluated.length === 0) {
+        return t('analysis.no_data_provided_desc', { defaultValue: "Aucune condition n'a pu être évaluée. Ajoutez un selfie (recommandé) ou renseignez vos niveaux (acné, pores, rougeurs, hydratation, rides) pour obtenir un diagnostic fiable et des solutions adaptées." });
+    }
+
+    const sorted = [...evaluated].sort((a, b) => (a.score ?? 0) - (b.score ?? 0));
+    const allProblems = sorted.map(c => CONDITION_META[c.type]?.label || c.type);
+    const userDeclaredNotDetected = (r.conditionScores || [])
+        .filter(c =>
+            c?.evaluated === false &&
+            typeof c?.notEvaluatedReason === 'string' &&
+            c.notEvaluatedReason.toLowerCase().includes('declare'),
+        )
+        .map(c => CONDITION_META[c.type]?.label || c.type);
+    const score = typeof r.globalScore === 'number' ? Math.round(r.globalScore) : null;
+
+    const solutions: string[] = [];
+    const addIfPresent = (condType: string, text: string) => {
+        if (evaluated.some(c => c.type === condType)) solutions.push(text);
+    };
+    addIfPresent('Acne', t('analysis.summary_solutions.Acne', { defaultValue: "Acné : routine douce + actifs ciblés (BHA/azélaïque) progressivement, sans sur-nettoyer." }));
+    addIfPresent('Blackheads', t('analysis.summary_solutions.Blackheads', { defaultValue: "Points noirs : exfoliation chimique régulière (BHA) et hydratation légère pour éviter l'effet rebond." }));
+    addIfPresent('Enlarged-Pores', t('analysis.summary_solutions.Enlarged-Pores', { defaultValue: "Pores : niacinamide + contrôle du sébum, et protection solaire quotidienne pour préserver la texture." }));
+    addIfPresent('Skin Redness', t('analysis.summary_solutions.Skin Redness', { defaultValue: "Rougeurs : apaiser la barrière cutanée, éviter les irritants et privilégier des formules sans parfum." }));
+    addIfPresent('Hydration', t('analysis.summary_solutions.Hydration', { defaultValue: "Hydratation : renforcer la barrière (humectants + émollients) et limiter les exfoliants trop fréquents." }));
+    addIfPresent('Wrinkles', t('analysis.summary_solutions.Wrinkles', { defaultValue: "Rides : SPF quotidien + actifs anti-âge introduits progressivement (rétinoïde/peptides)." }));
+
+    const header = score !== null ? `${t('analysis.global_score_estimated') || 'Score global estimé'} : ${score}/100.` : `${t('analysis.summary_header_done') || 'Analyse réalisée.'}`;
+    const focus = allProblems.length ? `${t('analysis.conditions_analyzed_label') || 'Conditions analysées'} : ${allProblems.join(', ')}.` : '';
+    const mismatch = userDeclaredNotDetected.length
+        ? `${t('analysis.declared_not_detected_label') || 'Déclarées mais non détectées visuellement'} : ${userDeclaredNotDetected.join(', ')}.`
+        : '';
+    const plan = solutions.length ? `${t('analysis.recommended_plan_label') || 'Plan recommandé'} : ${solutions.join(' ')}` : '';
+    return `${header} ${focus} ${mismatch} ${plan}`.trim();
+}
+
+/* ──────────────────────── Main Page ──────────────────────────── */
 export default function SkinAnalysisPage() {
     const { t, i18n } = useTranslation();
     const { CONDITION_META, BLEND_LABELS, CONDITION_DETAILS } = getAnalysisMetadata(t);
@@ -126,44 +751,6 @@ export default function SkinAnalysisPage() {
         window.addEventListener('keydown', onEscape);
         return () => window.removeEventListener('keydown', onEscape);
     }, [selectedCondition]);
-
-    const buildAnalysisSummary = useCallback((r: GlobalScoreResult | null) => {
-        if (!r) return '';
-        const evaluated = (r.conditionScores || []).filter(c => c?.evaluated !== false && typeof c?.score === 'number') as ConditionScore[];
-        if (evaluated.length === 0) {
-            return t('analysis.no_data_provided_desc', { defaultValue: "Aucune condition n'a pu être évaluée. Ajoutez un selfie (recommandé) ou renseignez vos niveaux (acné, pores, rougeurs, hydratation, rides) pour obtenir un diagnostic fiable et des solutions adaptées." });
-        }
-
-        const sorted = [...evaluated].sort((a, b) => (a.score as number) - (b.score as number));
-        const allProblems = sorted.map(c => CONDITION_META[c.type]?.label || c.type);
-        const userDeclaredNotDetected = (r.conditionScores || [])
-            .filter(c =>
-                c?.evaluated === false &&
-                typeof c?.notEvaluatedReason === 'string' &&
-                c.notEvaluatedReason.toLowerCase().includes('declare'),
-            )
-            .map(c => CONDITION_META[c.type]?.label || c.type);
-        const score = typeof r.globalScore === 'number' ? Math.round(r.globalScore) : null;
-
-        const solutions: string[] = [];
-        const addIfPresent = (condType: string, text: string) => {
-            if (evaluated.some(c => c.type === condType)) solutions.push(text);
-        };
-        addIfPresent('Acne', t('analysis.summary_solutions.Acne', { defaultValue: "Acné : routine douce + actifs ciblés (BHA/azélaïque) progressivement, sans sur-nettoyer." }));
-        addIfPresent('Blackheads', t('analysis.summary_solutions.Blackheads', { defaultValue: "Points noirs : exfoliation chimique régulière (BHA) et hydratation légère pour éviter l'effet rebond." }));
-        addIfPresent('Enlarged-Pores', t('analysis.summary_solutions.Enlarged-Pores', { defaultValue: "Pores : niacinamide + contrôle du sébum, et protection solaire quotidienne pour préserver la texture." }));
-        addIfPresent('Skin Redness', t('analysis.summary_solutions.Skin Redness', { defaultValue: "Rougeurs : apaiser la barrière cutanée, éviter les irritants et privilégier des formules sans parfum." }));
-        addIfPresent('Hydration', t('analysis.summary_solutions.Hydration', { defaultValue: "Hydratation : renforcer la barrière (humectants + émollients) et limiter les exfoliants trop fréquents." }));
-        addIfPresent('Wrinkles', t('analysis.summary_solutions.Wrinkles', { defaultValue: "Rides : SPF quotidien + actifs anti-âge introduits progressivement (rétinoïde/peptides)." }));
-
-        const header = score !== null ? `${t('analysis.global_score_estimated') || 'Score global estimé'} : ${score}/100.` : `${t('analysis.summary_header_done') || 'Analyse réalisée.'}`;
-        const focus = allProblems.length ? `${t('analysis.conditions_analyzed_label') || 'Conditions analysées'} : ${allProblems.join(', ')}.` : '';
-        const mismatch = userDeclaredNotDetected.length
-            ? `${t('analysis.declared_not_detected_label') || 'Déclarées mais non détectées visuellement'} : ${userDeclaredNotDetected.join(', ')}.`
-            : '';
-        const plan = solutions.length ? `${t('analysis.recommended_plan_label') || 'Plan recommandé'} : ${solutions.join(' ')}` : '';
-        return `${header} ${focus} ${mismatch} ${plan}`.trim();
-    }, [t, CONDITION_META]);
 
     useEffect(() => {
         let mounted = true;
@@ -415,8 +1002,8 @@ export default function SkinAnalysisPage() {
 
         const ai = result.metaWeighting?.aiWeight;
         const user = result.metaWeighting?.userWeight;
-        if (Number.isFinite(ai) && Number.isFinite(user)) {
-            return { aiWeight: ai as number, userWeight: user as number };
+        if (typeof ai === 'number' && typeof user === 'number') {
+            return { aiWeight: ai, userWeight: user };
         }
 
         return { aiWeight: 1, userWeight: 0 };
@@ -585,86 +1172,7 @@ export default function SkinAnalysisPage() {
             <div style={{ maxWidth: 1120, margin: '0 auto' }}>
 
                 {/* ── Main Header Analysis ── */}
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    flexWrap: 'wrap',
-                    rowGap: 18,
-                    marginBottom: 34,
-                    padding: '18px 20px',
-                    background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: 20,
-                    boxShadow: '0 12px 28px -16px rgba(15,23,42,0.22)'
-                }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <div style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            background: 'rgba(13,148,136,0.08)', border: '1px solid rgba(13,148,136,0.15)',
-                            borderRadius: 99, padding: '5px 12px', width: 'fit-content'
-                        }}>
-                            <Sparkles size={12} style={{ color: '#0d9488' }} />
-                            <span style={{ fontSize: 10, color: '#0d9488', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                                {t('analysis.ai_engine_tag')}
-                            </span>
-                        </div>
-                        <h1 style={{
-                            fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 900,
-                            color: '#0f172a',
-                            margin: 0, lineHeight: 1.05,
-                            letterSpacing: '-0.02em'
-                        }}>
-                            {t('analysis.title')}
-                        </h1>
-                        <p style={{ color: '#64748b', fontSize: 15, margin: 0 }}>
-                            {t('analysis.subtitle')}
-                        </p>
-                    </div>
-
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                        flexWrap: 'wrap',
-                        justifyContent: 'flex-end'
-                    }}>
-                        {result && (
-                            <div style={{
-                                display: 'flex', alignItems: 'center', gap: 6,
-                                backgroundColor: '#f0fdf4', padding: '8px 16px',
-                                borderRadius: '12px', border: '1px solid #dcfce7',
-                                marginRight: 8
-                            }}>
-                                <div className="pulse-dot" style={{ width: 6, height: 6 }} />
-                                <span style={{ fontSize: 12, color: '#10b981', fontWeight: 600 }}>
-                                    {analysisCount} {analysisCount > 1 ? t('analysis.detections_analyzed_plural') : t('analysis.detections_analyzed_singular')}
-                                </span>
-                            </div>
-                        )}
-
-
-                        <Link
-                            to="/analysis/compare"
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                background: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
-                                color: 'white',
-                                padding: '11px 20px',
-                                borderRadius: '13px',
-                                fontSize: '14px',
-                                fontWeight: '700',
-                                textDecoration: 'none',
-                                boxShadow: '0 12px 22px -14px rgba(13,148,136,0.75)',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            <GitCompare size={16} /> {t('common.compare') || 'Comparer'}
-                        </Link>
-                    </div>
-                </div>
+                <AnalysisHeader t={t} result={result} analysisCount={analysisCount} />
 
                 {/* ── Main Grid ── */}
                 <div style={{
@@ -690,112 +1198,12 @@ export default function SkinAnalysisPage() {
                                 />
                             </div>
 
-                            {/* Upload + Scan */}
-                            <div className="glass-card" style={{ padding: 32 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                                    <h2 style={{ fontSize: 13, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>
-                                        {t('analysis.profile.add_photos')}
-                                    </h2>
-                                    <span style={{ fontSize: 11, fontWeight: 700, color: (profile.imagesBase64?.length || 0) >= 5 ? '#ef4444' : '#0d9488', backgroundColor: (profile.imagesBase64?.length || 0) >= 5 ? '#fef2f2' : '#f0fdf4', padding: '4px 12px', borderRadius: '99px' }}>
-                                        {t('analysis.profile.images_count', { count: profile.imagesBase64?.length || 0 })}
-                                    </span>
-                                </div>
+                            <ImageUploadArea
+                              profile={profile} loading={loading} t={t}
+                              fileInputRef={fileInputRef} handleImageUpload={handleImageUpload}
+                              removeImage={removeImage} scanPhase={scanPhase} scanLabels={scanLabels}
+                            />
 
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handleImageUpload}
-                                    accept="image/*"
-                                    multiple
-                                    className="hidden"
-                                />
-
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 16 }}>
-                                    {profile.imagesBase64?.map((img, idx) => (
-                                        <div key={`preview-${idx}-${img.substring(0, 20)}`} style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', height: 160, border: '2px solid #e2e8f0', boxShadow: '0 8px 16px rgba(0,0,0,0.12)', transition: 'all 0.3s' }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.18)'; e.currentTarget.style.borderColor = '#0d9488'; }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.12)'; e.currentTarget.style.borderColor = '#e2e8f0'; }}>
-                                            <img
-                                                src={img}
-                                                alt={`Preview ${idx + 1}`}
-                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                            />
-                                            <button
-                                                onClick={() => removeImage(idx)}
-                                                className="absolute top-2 right-2 p-2 bg-white/95 backdrop-blur-sm rounded-full text-red-500 shadow-lg hover:bg-red-50 transition-all hover:scale-110"
-                                                type="button"
-                                            >
-                                                <X size={16} />
-                                            </button>
-                                            {idx === 0 && (
-                                                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(13,148,136,0.9), transparent)', color: 'white', fontSize: '11px', textAlign: 'center', fontWeight: 'bold', padding: '8px 4px' }}>
-                                                    {t('analysis.profile.main_photo')}
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-
-                                    {(profile.imagesBase64?.length || 0) < 5 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => fileInputRef.current?.click()}
-                                            disabled={loading}
-                                            style={{
-                                                height: 160,
-                                                background: 'linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%)',
-                                                border: '3px dashed #0d9488',
-                                                borderRadius: 16,
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                gap: 12,
-                                                transition: 'all 0.3s',
-                                                cursor: loading ? 'not-allowed' : 'pointer',
-                                                opacity: loading ? 0.6 : 1
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                if (!loading) {
-                                                    e.currentTarget.style.borderColor = '#10b981';
-                                                    e.currentTarget.style.background = 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)';
-                                                    e.currentTarget.style.boxShadow = '0 8px 16px rgba(13,148,136,0.2)';
-                                                    e.currentTarget.style.transform = 'scale(1.02)';
-                                                }
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                if (!loading) {
-                                                    e.currentTarget.style.borderColor = '#0d9488';
-                                                    e.currentTarget.style.background = 'linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%)';
-                                                    e.currentTarget.style.boxShadow = 'none';
-                                                    e.currentTarget.style.transform = 'scale(1)';
-                                                }
-                                            }}
-                                        >
-                                            <Upload size={32} style={{ color: '#0d9488' }} strokeWidth={1.5} />
-                                            <div style={{ textAlign: 'center' }}>
-                                                <span style={{ fontSize: 13, fontWeight: 700, color: '#0d9488', display: 'block' }}>{t('analysis.profile.add_a_photo')}</span>
-                                                <span style={{ fontSize: 11, color: '#64748b', marginTop: 4, display: 'block' }}>{t('analysis.profile.or_drag_drop')}</span>
-                                            </div>
-                                        </button>
-                                    )}
-                                </div>
-
-                                {loading && (
-                                    <div className="mt-4 text-sm text-teal-700 font-semibold flex items-center gap-2">
-                                        <RefreshCw size={14} className="animate-spin" />
-                                        {scanLabels[scanPhase]}
-                                    </div>
-                                )}
-
-                                {hasPhoto && !loading && (
-                                    <div className="mt-4 p-3 bg-teal-50 border border-teal-100 rounded-xl flex items-center gap-2">
-                                        <CheckCircle size={14} className="text-teal-500" />
-                                        <span className="text-[11px] font-bold text-teal-700 uppercase tracking-widest">
-                                            {t('analysis.profile.photos_ready')}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Analyze Button */}
                             <button
                                 className="analyze-btn"
                                 onClick={runAnalysis}
@@ -815,44 +1223,7 @@ export default function SkinAnalysisPage() {
                                 )}
                             </button>
 
-                            {/* Error */}
-                            {error && (
-                                <div style={{
-                                    background: error.includes('LIMIT_REACHED') || error.includes('visage humain') ? 'rgba(245,158,11,0.08)' : 'rgba(239,68,68,0.08)',
-                                    border: error.includes('LIMIT_REACHED') || error.includes('visage humain') ? '1px solid rgba(245,158,11,0.2)' : '1px solid rgba(239,68,68,0.2)',
-                                    borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start'
-                                }}>
-                                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                                        <AlertCircle size={18} style={{ color: error.includes('LIMIT_REACHED') || error.includes('visage humain') ? '#f59e0b' : '#ef4444', flexShrink: 0 }} />
-                                        <p style={{ fontSize: 13, fontWeight: 700, color: error.includes('LIMIT_REACHED') || error.includes('visage humain') ? '#b45309' : '#b91c1c', margin: 0 }}>
-                                            {error.includes('LIMIT_REACHED')
-                                                ? 'Limite mensuelle atteinte'
-                                                : error.includes('visage humain')
-                                                    ? 'Image non reconnue'
-                                                    : 'Erreur d\'analyse'}
-                                        </p>
-                                    </div>
-                                    <p style={{ fontSize: 12, color: error.includes('LIMIT_REACHED') || error.includes('visage humain') ? '#92400e' : '#fca5a5', lineHeight: 1.5, margin: 0 }}>
-                                        {error.includes('LIMIT_REACHED')
-                                            ? 'Vous avez atteint le nombre maximal d\'analyses pour votre plan actuel ce mois-ci.'
-                                            : error}
-                                    </p>
-                                    {error.includes('LIMIT_REACHED') && (
-                                        <Link
-                                            to="/upgrade"
-                                            style={{
-                                                display: 'inline-flex', alignItems: 'center', gap: 6,
-                                                backgroundColor: '#f59e0b', color: 'white',
-                                                padding: '8px 16px', borderRadius: '10px',
-                                                fontSize: '12px', fontWeight: '700', textDecoration: 'none',
-                                                boxShadow: '0 4px 12px rgba(245,158,11,0.3)', transition: 'all 0.2s'
-                                            }}
-                                        >
-                                            <ArrowUpCircle size={14} /> Passer au plan supérieur
-                                        </Link>
-                                    )}
-                                </div>
-                            )}
+                            <ErrorDisplay error={error} t={t} navigate={navigate} />
                         </div>
                     )}
 
@@ -883,300 +1254,12 @@ export default function SkinAnalysisPage() {
 
                             <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-                                <div className="glass-card" style={{
-                                    padding: 32,
-                                    background: `linear-gradient(135deg, rgba(13,148,136,0.05) 0%, rgba(8,145,178,0.03) 100%)`,
-                                    border: '1.5px solid rgba(13,148,136,0.2)',
-                                    borderRadius: '24px'
-                                }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
-                                        <h2 style={{ fontSize: 14, fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.15em', display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <Zap size={18} style={{ color: '#f59e0b' }} /> {t('analysis.health_score_title')}
-                                        </h2>
-                                        <CheckCircle size={16} style={{ color: '#10b981' }} />
-                                    </div>
-
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-                                        <ScoreRing score={result.globalScore} size={130} />
-
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{
-                                                display: 'grid',
-                                                gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-                                                gap: 8,
-                                                marginBottom: 12,
-                                            }}>
-                                                <div style={{ padding: '8px 10px', borderRadius: 10, background: '#ecfeff', border: '1px solid #bae6fd' }}>
-                                                    <div style={{ fontSize: 10, color: '#0f766e', fontWeight: 700, textTransform: 'uppercase' }}>{t('analysis.real_age')}</div>
-                                                    <div style={{ fontSize: 14, color: '#0f172a', fontWeight: 800 }}>{profile.age}</div>
-                                                </div>
-                                                <div style={{ padding: '8px 10px', borderRadius: 10, background: '#f0fdfa', border: '1px solid #99f6e4' }}>
-                                                    <div style={{ fontSize: 10, color: '#0f766e', fontWeight: 700, textTransform: 'uppercase' }}>{t('analysis.skin_age_ia')}</div>
-                                                    <div style={{ fontSize: 14, color: '#0f172a', fontWeight: 800 }}>
-                                                        {typeof result.skinAge === 'number' ? result.skinAge : 'N/A'}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {[
-                                                { label: t('analysis.best'), value: result.analysis.bestCondition, color: '#10b981', Icon: CircleCheck },
-                                                { label: t('analysis.critical_point'), value: result.analysis.worstCondition, color: '#ef4444', Icon: AlertTriangle },
-                                                { label: t('analysis.dominant'), value: result.analysis.dominantCondition, color: '#f59e0b', Icon: BarChart3 },
-                                            ].map(({ label, value, color, Icon }) => (
-                                                <div key={label} style={{
-                                                    display: 'flex', alignItems: 'center',
-                                                    justifyContent: 'space-between', marginBottom: 10
-                                                }}>
-                                                    <span style={{ fontSize: 12, color: '#64748b', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                        <Icon size={14} style={{ color, flexShrink: 0 }} />
-                                                        {label}
-                                                    </span>
-                                                    <span style={{ fontSize: 12, fontWeight: 700, color }}>
-                                                        {value
-                                                            ? (CONDITION_META[value]?.label || value)
-                                                            : 'N/A'}
-                                                    </span>
-                                                </div>
-                                            ))}
-
-                                            <div style={{
-                                                marginTop: 12, paddingTop: 12,
-                                                borderTop: '1px solid #f1f5f9',
-                                                display: 'flex', alignItems: 'center', gap: 6
-                                            }}>
-                                                <BarChart2 size={12} style={{ color: '#94a3b8' }} />
-                                                <span style={{ fontSize: 11, color: '#94a3b8' }}>
-                                                    {result.totalDetections} {result.totalDetections > 1 ? t('analysis.detections_analyzed_plural') : t('analysis.detections_analyzed_singular')}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Action Buttons for Results */}
-                                    <div style={{
-                                        marginTop: 20,
-                                        paddingTop: 16,
-                                        borderTop: '1px solid rgba(13,148,136,0.1)',
-                                        display: 'flex',
-                                        flexWrap: 'wrap',
-                                        gap: 10
-                                    }}>
-                                        <button
-                                            onClick={exportToCSV}
-                                            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm active:scale-95"
-                                        >
-                                            <Download size={14} className="text-teal-600" />
-                                            {t('analysis.export_csv')}
-                                        </button>
-                                        <button
-                                            onClick={exportToPDF}
-                                            className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 border border-teal-700 rounded-xl text-xs font-bold text-white hover:bg-teal-700 transition-all shadow-md active:scale-95"
-                                        >
-                                            <Download size={14} />
-                                            {t('analysis.export_pdf')}
-                                        </button>
-                                        <button
-                                            onClick={speakAnalysis}
-                                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 ${isSpeaking
-                                                ? 'bg-red-50 border border-red-100 text-red-600'
-                                                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                                                }`}
-                                        >
-                                            {isSpeaking ? <VolumeX size={14} /> : <Volume2 size={14} className="text-orange-500" />}
-                                            {isSpeaking ? t('analysis.stop_listening') : t('analysis.listen_analysis')}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Condition Scores */}
-                                <div className="glass-card" style={{ padding: 32, borderRadius: '24px' }}>
-                                    <h2 style={{ fontSize: 14, fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <BarChart3 size={18} style={{ color: '#0ea5e9' }} /> {t('analysis.scores_by_condition')}
-                                    </h2>
-                                    {result.combinedInsights && (
-                                        <div style={{
-                                            marginBottom: 20,
-                                            padding: 16,
-                                            borderRadius: 12,
-                                            border: '1px dashed #bae6fd',
-                                            background: 'linear-gradient(135deg, #ecfeff, #f8fafc)'
-                                        }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                                                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 14 }}>{t('analysis.fusion_photo_questionnaire')}</div>
-                                                <div style={{ fontSize: 11, color: '#0ea5e9', fontWeight: 700 }}>
-                                                    {Math.round((displayMetaWeighting.aiWeight ?? 0) * 100)}% {t('analysis.ai_photo')} · {Math.round((displayMetaWeighting.userWeight ?? 0) * 100)}% {t('analysis.you')}
-                                                </div>
-                                            </div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
-                                                {Object.entries(result.combinedInsights).map(([key, entry]) => {
-                                                    const meta = BLEND_LABELS[key];
-                                                    if (!meta) return null;
-                                                    return (
-                                                        <div key={key} style={{
-                                                            padding: 12,
-                                                            borderRadius: 10,
-                                                            background: '#fff',
-                                                            border: '1px solid #e2e8f0',
-                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
-                                                        }}>
-                                                            <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>{meta.label}</div>
-                                                            <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 6 }}>{meta.helper}</div>
-                                                            {hasPhoto && (
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#0f172a' }}>
-                                                                    <span>{t('analysis.ai_photo')}</span>
-                                                                    <span>{entry.aiScore ?? '—'}</span>
-                                                                </div>
-                                                            )}
-                                                            {entry.userScore !== undefined && (
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#0f172a' }}>
-                                                                    <span>{t('analysis.you')}</span>
-                                                                    <span>{entry.userScore}</span>
-                                                                </div>
-                                                            )}
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 800, color: '#0ea5e9', marginTop: 6 }}>
-                                                                <span>{t('analysis.fusion')}</span>
-                                                                <span>{Math.round(entry.combinedScore)}</span>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                            {!hasPhoto && (
-                                                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 8 }}>
-                                                    {t('analysis.no_selfie_provided')} · {t('analysis.fusion_based_on')}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                        {sortedConditions.map(condition => (
-                                            <ConditionBar key={condition.type} condition={condition} onSelect={setSelectedCondition} />
-                                        ))}
-                                    </div>
-                                </div>
-
-
-
-                                {/* AI Summary */}
-                                <div className={`p-10 rounded-28px shadow-2xl text-white relative overflow-hidden group ${currentPlan === 'FREE' ? 'bg-gradient-to-br from-slate-700 to-slate-800 shadow-slate-600/25 border-2 border-slate-600' : 'bg-gradient-to-br from-[#0d9488] to-[#0f766e] shadow-teal-500/30 border border-teal-400'}`} style={{ borderRadius: '28px' }}>
-                                    {currentPlan === 'FREE' && (
-                                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 bg-gradient-to-t from-slate-900/90 via-slate-800/60 to-transparent">
-                                            <div className="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mb-4 border-2 border-amber-400">
-                                                <Lock size={28} className="text-amber-300" />
-                                            </div>
-                                            <h3 className="text-lg font-black text-white mb-2">{t('analysis.deep_analysis')}</h3>
-                                            <p className="text-xs text-slate-300 text-center max-w-[220px] mb-4">{t('analysis.unlock_analysis_desc')}</p>
-                                            <button onClick={() => navigate('/upgrade')} className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg font-bold text-xs shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-105 transition-all">
-                                                {t('analysis.unlock_button')}
-                                            </button>
-                                        </div>
-                                    )}
-                                    {currentPlan !== 'FREE' && <Sparkles className="absolute -right-4 -top-4 w-24 h-24 opacity-10 group-hover:rotate-12 transition-transform" />}
-                                    <div className={`relative z-10 ${currentPlan === 'FREE' ? 'blur-sm opacity-40' : ''}`}>
-                                        <h3 className="text-sm font-bold uppercase tracking-widest mb-4 flex items-center gap-2 opacity-80">
-                                            <CheckCircle size={14} /> {t('analysis.analysis_summary')}
-                                        </h3>
-                                        <p className="text-lg font-medium leading-relaxed italic">
-                                            {buildAnalysisSummary(result)}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* ── Recommendations & Routine Navigation Buttons ── */}
-                                <div id="recommendations-section" className="glass-card p-8 rounded-[28px] border-2 border-teal-100 bg-white/50 backdrop-blur shadow-xl shadow-teal-500/5 mb-6 fade-in">
-                                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-3 mb-2">
-                                                <div className="bg-teal-100 p-2 rounded-xl text-teal-600">
-                                                    <Sparkles size={20} />
-                                                </div>
-                                                <h3 className="text-xl font-black text-slate-800">{t('analysis.ai_personalized_solutions')}</h3>
-                                            </div>
-                                            <p className="text-slate-600 text-sm leading-relaxed">
-                                                {t('analysis.ai_solutions_desc')}
-                                            </p>
-                                        </div>
-
-                                        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                                            <button
-                                                onClick={() => navigate('/analysis/recommendations', { state: { profile } })}
-                                                className="group flex items-center justify-center gap-3 px-8 py-4 bg-white border-2 border-teal-500 text-teal-700 rounded-2xl font-bold transition-all hover:bg-teal-50 hover:shadow-lg active:scale-95"
-                                            >
-                                                <FlaskConical size={18} className="group-hover:rotate-12 transition-transform" />
-                                                {t('analysis.view_products')}
-                                            </button>
-                                            <button
-                                                onClick={() => navigate('/routines')}
-                                                className="group flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-2xl font-bold shadow-xl shadow-teal-600/20 hover:scale-105 active:scale-95 transition-all"
-                                            >
-                                                <Calendar size={18} />
-                                                {t('analysis.my_ia_routine')}
-                                                <ArrowUpCircle size={16} className="rotate-45" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Progress Tracking Section */}
-                                <div id="history-section" className="glass-card fade-in relative overflow-hidden border-2" style={{ padding: 24, minHeight: 400, borderColor: currentPlan === 'FREE' ? '#f59e0b33' : '#e2e8f0' }}>
-                                    {currentPlan === 'FREE' && (
-                                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 bg-gradient-to-br from-white/80 via-amber-50/60 to-white/80 backdrop-blur-sm border-t-2 border-amber-200">
-                                            <div className="w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-50 rounded-full flex items-center justify-center mb-3 border-2 border-amber-300 shadow-lg shadow-amber-200/50">
-                                                <Lock size={32} className="text-amber-600" />
-                                            </div>
-                                            <h3 className="text-xl font-black text-amber-900 mb-2">{t('analysis.progress_tracking')}</h3>
-                                            <p className="text-slate-700 text-sm text-center max-w-[260px] mb-6 leading-relaxed">{t('analysis.progress_tracking_desc')}</p>
-                                            <Link to="/upgrade" className="px-7 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-105 transition-all" style={{ textDecoration: 'none' }}>
-                                                {t('analysis.unlock_tracking')}
-                                            </Link>
-                                        </div>
-                                    )}
-
-                                    <div className={currentPlan === 'FREE' ? 'opacity-20 pointer-events-none' : ''}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                <BarChart2 className="text-teal-600" size={20} />
-                                                <h2 style={{ fontSize: 16, fontWeight: 800, color: '#1e293b', margin: 0 }}>
-                                                    {t('analysis.progress_tracking')}
-                                                </h2>
-                                            </div>
-                                        </div>
-                                        {timelineError && (
-                                            <div style={{
-                                                padding: 12,
-                                                borderRadius: 12,
-                                                border: '1px solid rgba(239,68,68,0.2)',
-                                                background: 'rgba(239,68,68,0.05)',
-                                                color: '#dc2626',
-                                                fontSize: 12,
-                                                fontWeight: 700,
-                                            }}>
-                                                {timelineError}
-                                            </div>
-                                        )}
-
-                                        <div style={{ marginTop: 8 }}>
-                                            {timelineLoading ? (
-                                                <div className="h-48 w-full bg-slate-50 rounded-2xl border border-dashed border-slate-200 flex items-center justify-center">
-                                                    <Loader2 className="animate-spin text-slate-400" size={28} />
-                                                </div>
-                                            ) : (
-                                                <TimelineView data={timelineData} height={260} showTitle={false} />
-                                            )}
-                                        </div>
-
-                                        <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
-                                            <Link
-                                                to="/history"
-                                                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm active:scale-95"
-                                                style={{ textDecoration: 'none' }}
-                                            >
-                                                <BarChart3 size={14} className="text-teal-600" />
-                                                {t('analysis.view_full_history')}
-                                            </Link>
-                                        </div>
-                                    </div>
-                                </div>
+                                <ScoreOverviewCard result={result} profile={profile} CONDITION_META={CONDITION_META} t={t} />
+                                <AnalysisActionButtons exportToCSV={exportToCSV} exportToPDF={exportToPDF} speakAnalysis={speakAnalysis} isSpeaking={isSpeaking} t={t} />
+                                <InsightsSection result={result} BLEND_LABELS={BLEND_LABELS} t={t} hasPhoto={hasPhoto} displayMetaWeighting={displayMetaWeighting} sortedConditions={sortedConditions} setSelectedCondition={setSelectedCondition} />
+                                <AISummaryCard result={result} currentPlan={currentPlan} buildAnalysisSummary={() => buildAnalysisSummary(result, t, CONDITION_META)} t={t} navigate={navigate} />
+                                <NavigationSection t={t} navigate={navigate} profile={profile} />
+                                <ProgressSection currentPlan={currentPlan} t={t} timelineError={timelineError} timelineLoading={timelineLoading} timelineData={timelineData} navigate={navigate} />
 
 
 
@@ -1200,280 +1283,20 @@ export default function SkinAnalysisPage() {
 
             {/* ──── PRINTABLE REPORT TEMPLATE ──── */}
             {result && (
-                <div id="printable-report" style={{
-                    background: 'white',
-                    padding: '15mm',
-                    width: '100%',
-                    maxWidth: '210mm',
-                    boxSizing: 'border-box',
-                    margin: '0 auto',
-                    fontFamily: "'Inter', sans-serif",
-                    color: '#1e293b'
-                }}>
-                    <style>{`
-                        @media print {
-                            @page { 
-                                size: A4; 
-                                margin: 0; 
-                            }
-                            body { margin: 0; }
-                            .page-break { page-break-after: always; }
-                            .no-break { 
-                                page-break-inside: avoid; 
-                                break-inside: avoid;
-                                -webkit-column-break-inside: avoid;
-                            }
-                        }
-                    `}</style>
-
-                    {/* Page 1: Executive Summary */}
-                    <div className="page-break">
-                        {/* Header */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px solid #0d9488', paddingBottom: 25, marginBottom: 40 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                                <div style={{ background: '#0d9488', width: 48, height: 48, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', boxShadow: '0 4px 12px rgba(13,148,136,0.2)' }}>
-                                    <Sparkles size={28} />
-                                </div>
-                                <div>
-                                    <h1 style={{ fontSize: 32, fontWeight: 900, color: '#0d9488', margin: 0, letterSpacing: '-0.04em' }}>DEEPSKYN PRO</h1>
-                                    <p style={{ margin: 0, color: '#64748b', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{t('analysis.pdf.ai_expertise', { defaultValue: 'Intelligence Artificielle Dermatologique' })}</p>
-                                </div>
-                            </div>
-                            <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a' }}>{t('analysis.pdf.expert_report', { defaultValue: 'RAPPORT ANALYTIQUE EXPERT' })}</div>
-                                <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>ID: #{new Date().getTime().toString().slice(-8)}</div>
-                                <div style={{ fontSize: 12, color: '#94a3b8' }}>{t('analysis.pdf.generated_on', { defaultValue: 'Généré le' })} {new Date().toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : i18n.language === 'en' ? 'en-US' : 'fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
-                            </div>
-                        </div>
-
-                        {/* Executive Summary Grid */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: 30, marginBottom: 40 }}>
-                            {/* Score Card */}
-                            <div style={{ background: '#f8fafc', padding: 35, borderRadius: 24, border: '1px solid #e2e8f0', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                <div style={{ fontSize: 13, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: 20, letterSpacing: '0.05em' }}>{t('analysis.health_score_title')}</div>
-                                <div style={{ fontSize: 80, fontWeight: 900, color: globalScoreColor, lineHeight: 1, letterSpacing: '-0.05em' }}>{Math.round(result.globalScore)}<span style={{ fontSize: 24, color: '#94a3b8' }}>/100</span></div>
-                                <div style={{
-                                    marginTop: 20,
-                                    padding: '8px 20px',
-                                    borderRadius: 99,
-                                    display: 'inline-block',
-                                    background: `${globalScoreColor}15`,
-                                    color: globalScoreColor,
-                                    fontSize: 16,
-                                    fontWeight: 800,
-                                    textTransform: 'uppercase'
-                                }}>
-                                    {result.globalScore >= 75 ? t('analysis.optimal') : result.globalScore >= 50 ? t('analysis.moderate') : t('analysis.critical')}
-                                </div>
-                                <div style={{ borderTop: '1px solid #e2e8f0', marginTop: 30, paddingTop: 20, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                                        <span style={{ color: '#64748b', fontWeight: 600 }}>{t('analysis.profile.age')}:</span>
-                                        <span style={{ fontWeight: 800, color: '#1e293b' }}>{profile.age} {t('analysis.pdf.years', { defaultValue: 'ans' })}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                                        <span style={{ color: '#64748b', fontWeight: 600 }}>{t('analysis.profile.skin_type')}:</span>
-                                        <span style={{ fontWeight: 800, color: '#1e293b' }}>{t(`analysis.profile.skin_types.${profile.skinType}`) || profile.skinType}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                                        <span style={{ color: '#64748b', fontWeight: 600 }}>{t('analysis.pdf.ai_detections', { defaultValue: 'Detections IA' })}:</span>
-                                        <span style={{ fontWeight: 800, color: '#1e293b' }}>{result.totalDetections} {t('analysis.pdf.points', { defaultValue: 'points' })}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Summary Text */}
-                            <div>
-                                <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <Activity size={18} color="#0d9488" />
-                                    Diagnostic de Synthèse
-                                </h2>
-                                <p style={{ fontSize: 15, color: '#334155', lineHeight: 1.8, marginBottom: 25, textAlign: 'justify' }}>
-                                    {currentPlan === 'FREE'
-                                        ? t('analysis.pdf.free_plan_message', { defaultValue: 'Le diagnostic expert approfondi est réservé aux membres PRO. Ce rapport interactif présente une synthèse de votre état cutané actuel basée sur notre moteur IA multi-spectre.' })
-                                        : t('analysis.pdf.pro_summary_template', {
-                                            best: result.analysis.bestCondition ? (CONDITION_META[result.analysis.bestCondition]?.label || result.analysis.bestCondition) : 'N/A',
-                                            worst: result.analysis.worstCondition ? (CONDITION_META[result.analysis.worstCondition]?.label || result.analysis.worstCondition) : 'N/A',
-                                            score: Math.round(result.globalScore),
-                                            defaultValue: `L'analyse automatisée de votre profil cutané met en évidence une performance optimale sur la condition ${result.analysis.bestCondition ? (CONDITION_META[result.analysis.bestCondition]?.label || result.analysis.bestCondition) : 'N/A'}. À l'inverse, l'aspect ${result.analysis.worstCondition ? (CONDITION_META[result.analysis.worstCondition]?.label || result.analysis.worstCondition) : 'N/A'} constitue votre priorité dermatologique actuelle. L'équilibre global de votre barrière est évalué à ${Math.round(result.globalScore)}/100.`
-                                        })
-                                    }
-                                </p>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                                    <div style={{ padding: 20, borderRadius: 20, background: '#f0fdf4', border: '1px solid #dcfce7' }}>
-                                        <div style={{ fontSize: 12, fontWeight: 800, color: '#10b981', textTransform: 'uppercase', marginBottom: 8 }}>{t('analysis.pdf.strength_point', { defaultValue: 'Point de Force' })}</div>
-                                        <div style={{ fontSize: 16, fontWeight: 900, color: '#065f46' }}>{result.analysis.bestCondition ? (CONDITION_META[result.analysis.bestCondition]?.label || result.analysis.bestCondition) : t('analysis.pdf.stable', { defaultValue: 'Stable' })}</div>
-                                    </div>
-                                    <div style={{ padding: 20, borderRadius: 20, background: '#fef2f2', border: '1px solid #fee2e2' }}>
-                                        <div style={{ fontSize: 12, fontWeight: 800, color: '#ef4444', textTransform: 'uppercase', marginBottom: 8 }}>{t('analysis.pdf.priority_axis', { defaultValue: 'Axe Prioritaire' })}</div>
-                                        <div style={{ fontSize: 16, fontWeight: 900, color: '#991b1b' }}>{result.analysis.worstCondition ? (CONDITION_META[result.analysis.worstCondition]?.label || result.analysis.worstCondition) : t('analysis.pdf.none', { defaultValue: 'Aucun' })}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Conditions Detailed List (Page 2) */}
-                        <div style={{ marginTop: 20 }}>
-                            <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 20, paddingLeft: 14, borderLeft: '5px solid #0d9488' }}>
-                                {t('analysis.pdf.detailed_analysis', { defaultValue: 'Analyse Détaillée des Conditions' })}
-                            </h2>
-                            <div style={{ display: 'block' }}>
-                                {result.conditionScores.slice(0, 4).map(c => {
-                                    const meta = CONDITION_META[c.type];
-                                    const details = CONDITION_DETAILS[c.type];
-                                    const hasScore = typeof c.score === 'number';
-                                    const scoreValue = hasScore ? (c.score as number) : 0;
-                                    const getMetricColor = (s: number | null | undefined) => {
-                                        if (s == null) return '#64748b';
-                                        if (s >= 75) return '#10b981';
-                                        if (s >= 50) return '#f59e0b';
-                                        return '#ef4444';
-                                    };
-                                    const color = !hasScore ? '#64748b' : getMetricColor(scoreValue);
-
-                                    return (
-                                        <div key={c.type} className="no-break" style={{ padding: 22, borderRadius: 20, border: '1px solid #f1f5f9', background: '#fff', marginBottom: 15, display: 'inline-block', width: '100%', boxSizing: 'border-box' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                                    <div style={{ width: 36, height: 36, borderRadius: 10, background: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: color }}>
-                                                        {meta?.icon ? <meta.icon size={20} /> : <Activity size={20} />}
-                                                    </div>
-                                                    <div>
-                                                        <div style={{ fontSize: 16, fontWeight: 900, color: '#1e293b' }}>{meta?.label || c.type}</div>
-                                                        <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>{meta?.description}</div>
-                                                    </div>
-                                                </div>
-                                                <div style={{ textAlign: 'right' }}>
-                                                    <div style={{ fontSize: 24, fontWeight: 900, color: color }}>{hasScore ? `${Math.round(scoreValue)}/100` : '—'}</div>
-                                                    <div style={{ fontSize: 10, fontWeight: 800, color: color, textTransform: 'uppercase' }}>{t('analysis.pdf.expert_score', { defaultValue: 'Expert Score' })}</div>
-                                                </div>
-                                            </div>
-
-                                            {details && (
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 15, paddingTop: 15, borderTop: '1px dashed #e2e8f0' }}>
-                                                    <div>
-                                                        <div style={{ fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.05em' }}>{t('analysis.pdf.probable_causes', { defaultValue: 'Causes Probables' })}</div>
-                                                        <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-                                                            {details.causes.map((cause) => (
-                                                                <li key={cause} style={{ fontSize: 12, color: '#64748b', marginBottom: 4, display: 'flex', gap: 6 }}>
-                                                                    <span style={{ color: color }}>•</span> {cause}
-                                                                </li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                    <div>
-                                                        <div style={{ fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.05em' }}>{t('analysis.pdf.care_advice', { defaultValue: 'Conseils de Soins' })}</div>
-                                                        <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-                                                            {details.careRecommendations.map((reco) => (
-                                                                <li key={reco} style={{ fontSize: 12, color: '#64748b', marginBottom: 4, display: 'flex', gap: 6 }}>
-                                                                    <span style={{ color: color }}>✔</span> {reco}
-                                                                </li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Page 2: Full Skincare Routine */}
-                    <div className="page-break" style={{ paddingTop: '10mm' }}>
-                        <h2 style={{ fontSize: 22, fontWeight: 900, color: '#0d9488', marginBottom: 30, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                            {t('analysis.pdf.complete_care_strategy', { defaultValue: 'Votre Stratégie de Soins Complète' })}
-                        </h2>
-
-                        {currentPlan === 'FREE' ? (
-                            <div style={{ padding: 40, textAlign: 'center', color: '#64748b', fontSize: 14, border: '1px dashed #e2e8f0', borderRadius: 20, background: '#f8fafc' }}>
-                                <div style={{ fontSize: 40, marginBottom: 15 }}>✨</div>
-                                <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1e293b', marginBottom: 10 }}>{t('analysis.pdf.upgrade_title', { defaultValue: 'Passez à la vitesse supérieure' })}</h3>
-                                {t('analysis.pdf.pro_routine_only', { defaultValue: 'La routine de soins complète et détaillée (incluant les recommandations de produits spécifiques) est une fonctionnalité de notre Intelligence Artificielle avancée exclusive aux abonnés PRO et PREMIUM.' })}
-                            </div>
-                        ) : routineResult ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 35 }}>
-                                {/* Morning Routine */}
-                                <div className="no-break" style={{ display: 'inline-block', width: '100%', boxSizing: 'border-box' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, padding: '10px 20px', background: '#f0f9ff', borderRadius: 14, border: '1px solid #bae6fd' }}>
-                                        <Sun size={24} color="#0369a1" />
-                                        <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0369a1', margin: 0 }}>{t('analysis.pdf.morning_routine', { defaultValue: 'Routine du Matin (AM)' })}</h3>
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                        {routineResult.morning.map((step, i) => (
-                                            <div key={`morning-step-${step.stepName}-${i}`} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', background: '#fcfcfd' }}>
-                                                <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#0369a1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{i + 1}</div>
-                                                <div style={{ flex: 1 }}>
-                                                    <div style={{ fontSize: 14, fontWeight: 800, color: '#1e293b' }}>{step.stepName} — <span style={{ color: '#0369a1' }}>{step.product?.name || t('analysis.pdf.recommended_product', { defaultValue: 'Produit recommandé' })}</span></div>
-                                                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, lineHeight: 1.5 }}>
-                                                        <strong>{t('analysis.pdf.instructions', { defaultValue: 'Instructions' })}:</strong> {step.instruction}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Night Routine */}
-                                <div className="no-break" style={{ display: 'inline-block', width: '100%', boxSizing: 'border-box', marginTop: 35 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, padding: '10px 20px', background: '#f5f3ff', borderRadius: 14, border: '1px solid #ddd6fe' }}>
-                                        <Moon size={24} color="#5b21b6" />
-                                        <h3 style={{ fontSize: 18, fontWeight: 800, color: '#5b21b6', margin: 0 }}>{t('analysis.pdf.night_routine', { defaultValue: 'Routine du Soir (PM)' })}</h3>
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                        {routineResult.night.map((step, i) => (
-                                            <div key={`night-step-${step.stepName}-${i}`} style={{ display: 'flex', gap: 15, padding: 15, borderRadius: 16, border: '1px solid #f1f5f9', background: '#fcfcfd' }}>
-                                                <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#5b21b6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{i + 1}</div>
-                                                <div style={{ flex: 1 }}>
-                                                    <div style={{ fontSize: 14, fontWeight: 800, color: '#1e293b' }}>{step.stepName} — <span style={{ color: '#5b21b6' }}>{step.product?.name || t('analysis.pdf.recommended_product', { defaultValue: 'Produit recommandé' })}</span></div>
-                                                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, lineHeight: 1.5 }}>
-                                                        <strong>{t('analysis.pdf.instructions', { defaultValue: 'Instructions' })}:</strong> {step.instruction}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* General Advice */}
-                                <div className="no-break" style={{ padding: 25, borderRadius: 24, background: 'linear-gradient(135deg, #f0fdfa 0%, #f0f9ff 100%)', border: '1px solid #ccfbf1', display: 'inline-block', width: '100%', boxSizing: 'border-box', marginTop: 35 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                                        <Info size={20} color="#0d9488" />
-                                        <div style={{ fontSize: 12, fontWeight: 800, color: '#0d9488', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('analysis.pdf.expert_personalized_advice', { defaultValue: 'Conseil Expert Personnalisé' })}</div>
-                                    </div>
-                                    <p style={{ margin: 0, fontSize: 14, color: '#134e4a', lineHeight: 1.8, fontStyle: 'italic' }}>
-                                        "{routineResult.generalAdvice}"
-                                    </p>
-                                </div>
-                            </div>
-                        ) : routineError ? (
-                            <div style={{ padding: 40, textAlign: 'center', color: '#ef4444', fontSize: 14, border: '1px dashed #fecaca', borderRadius: 20, background: '#fef2f2' }}>
-                                ⚠️ {t('analysis.errors.routine_load_fail', { defaultValue: 'Impossible de charger la section routine pour le moment.' })}<br />
-                                {t('analysis.errors.retry_hint', { defaultValue: '(Veuillez réessayer plus tard ou vérifier votre connexion)' })}
-                            </div>
-                        ) : (
-                            <div style={{ padding: 40, textAlign: 'center', color: '#64748b', fontSize: 14, border: '1px dashed #e2e8f0', borderRadius: 20 }}>
-                                {t('analysis.routine_generating', { defaultValue: 'Génération de la routine personnalisée en cours...' })} <br />
-                                {t('analysis.routine_generating_hint', { defaultValue: '(Veuillez attendre avant le téléchargement PDF)' })}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Footer / Legal */}
-                    <div style={{ marginTop: 40, paddingTop: 30, borderTop: '1px solid #e2e8f0', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                            <div style={{ background: '#0d9488', width: 20, height: 20, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-                                <Sparkles size={12} />
-                            </div>
-                            <span style={{ fontSize: 14, fontWeight: 900, color: '#0d9488', letterSpacing: '0.1em' }}>DEEPSKYN AI</span>
-                        </div>
-                        <p style={{ fontSize: 10, color: '#94a3b8', maxWidth: 600, margin: '0 auto', lineHeight: 1.5 }}>
-                            {t('analysis.pdf.footer_disclaimer', { defaultValue: "Ce rapport a été généré par l'Intelligence Artificielle de DeepSkyn. Les résultats sont basés sur une analyse visuelle et des données déclaratives. Cette analyse n'est pas un diagnostic médical et ne remplace en aucun cas l'avis, le diagnostic ou le traitement d'un professionnel de santé qualifié." })}
-                        </p>
-                        <p style={{ fontSize: 12, fontWeight: 800, color: '#0d9488', marginTop: 15 }}>{t('analysis.pdf.footer_brand', { defaultValue: 'www.deepskyn.app • Expertise Digitale Dermatologique' })}</p>
-                    </div>
-                </div>
+              <PrintableReport
+                result={result}
+                profile={profile}
+                CONDITION_META={CONDITION_META}
+                t={t}
+                BLEND_LABELS={BLEND_LABELS}
+                displayMetaWeighting={displayMetaWeighting}
+                routineResult={routineResult}
+                routineError={routineError}
+                currentPlan={currentPlan}
+                globalScoreColor={globalScoreColor}
+                i18n={i18n}
+                CONDITION_DETAILS={CONDITION_DETAILS}
+              />
             )}
         </div>
     );

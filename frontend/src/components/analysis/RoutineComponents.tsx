@@ -1,10 +1,8 @@
 import React from 'react';
 import {
-    Sun, Moon, Sparkles, ChevronDown, ChevronUp,
-    Loader2, Lock, ArrowUpRight, Info, CheckCircle, AlertCircle,
-    Droplets, Star, Zap,
+    Sun, Moon,
 } from 'lucide-react';
-import type { SvrRoutineStep, SvrRecommendedProduct } from '../../services/svrRoutineService';
+
 
 /* ─── Category colour map ────────────────────────────────────────── */
 export const CAT_META: Record<string, { label: string; color: string; bg: string; emoji: string }> = {

@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import {
     Activity, Info, Waves, Flame, Microscope,
     Bandage, CircleDot, HeartPulse, Sparkles,
-    AlertTriangle, Sun, Moon, CheckCircle, X,
-    ChevronRight, Zap
+    AlertTriangle, CheckCircle, X,
+    ChevronRight
 } from 'lucide-react';
 import type { ConditionScore } from '../../types/aiAnalysis';
 
@@ -206,9 +206,14 @@ export function ConditionBar({ condition, onSelect }: { condition: ConditionScor
     };
 
     const isEvaluated = typeof condition.score === 'number';
-    const scoreValue = isEvaluated ? (condition.score as number) : 0;
-    
-    const scoreColor = !isEvaluated ? '#94a3b8' : (scoreValue >= 75 ? '#10b981' : (scoreValue >= 50 ? '#f59e0b' : '#ef4444'));
+    const scoreValue = isEvaluated ? condition.score : 0;
+    const getScoreColor = (evaluated: boolean, val: number) => {
+        if (!evaluated) return '#94a3b8';
+        if (val >= 75) return '#10b981';
+        if (val >= 50) return '#f59e0b';
+        return '#ef4444';
+    };
+    const scoreColor = getScoreColor(isEvaluated, scoreValue);
 
     const getInterpretation = () => {
         if (!isEvaluated) return t('analysis.unavailable');
@@ -274,8 +279,24 @@ export function ConditionDetailDrawer({ condition, result, onClose }: { conditio
     const baseDetails = CONDITION_DETAILS[condition.type] || { detailedDescription: meta.description, causes: [], careRecommendations: [] };
 
     const scoreValue = typeof condition.score === 'number' ? Math.round(condition.score) : null;
-    const tier = scoreValue === null ? 'unknown' : (scoreValue >= 75 ? 'excellent' : (scoreValue >= 50 ? 'moderate' : 'critical'));
-    const severityColor = tier === 'excellent' ? '#10b981' : (tier === 'moderate' ? '#f59e0b' : (tier === 'critical' ? '#ef4444' : '#94a3b8'));
+
+    const getTier = (val: number | null) => {
+        if (val === null) return 'unknown';
+        if (val >= 75) return 'excellent';
+        if (val >= 50) return 'moderate';
+        return 'critical';
+    };
+    const tier = getTier(scoreValue);
+
+    const getSeverityColor = (t: string) => {
+        switch (t) {
+            case 'excellent': return '#10b981';
+            case 'moderate': return '#f59e0b';
+            case 'critical': return '#ef4444';
+            default: return '#94a3b8';
+        }
+    };
+    const severityColor = getSeverityColor(tier);
 
     const getDynamicDescription = () => {
         if (result.totalDetections === 0) return t('analysis.no_detection_summary', { condition: meta.label.toLowerCase() });
@@ -283,7 +304,13 @@ export function ConditionDetailDrawer({ condition, result, onClose }: { conditio
         if (tier === 'moderate') return `${baseDetails.detailedDescription} ${t('analysis.desc_moderate', { score: scoreValue })}`;
         
         const count = condition.count ?? 0;
-        const detectionsStr = count > 1 ? t('analysis.detections_plural', { count }) : (count === 1 ? t('analysis.detections_singular', { count }) : t('analysis.several_signals'));
+        let detectionsStr = t('analysis.several_signals');
+        if (count > 1) {
+            detectionsStr = t('analysis.detections_plural', { count });
+        } else if (count === 1) {
+            detectionsStr = t('analysis.detections_singular', { count });
+        }
+        
         return `${baseDetails.detailedDescription} ${t('analysis.desc_critical', { score: scoreValue, detections: detectionsStr })}`;
     };
 
@@ -299,7 +326,7 @@ export function ConditionDetailDrawer({ condition, result, onClose }: { conditio
                             <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: '#1e293b' }}>{meta.label}</h3>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
                                 <span style={{ fontSize: 11, fontWeight: 800, color: severityColor, textTransform: 'uppercase' }}>
-                                    {tier === 'excellent' ? t('analysis.optimal') : (tier === 'moderate' ? t('analysis.moderate') : t('analysis.critical'))}
+                                    {tier === 'excellent' ? t('analysis.optimal') : tier === 'moderate' ? t('analysis.moderate') : t('analysis.critical')}
                                 </span>
                                 <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#cbd5e1' }} />
                                 <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>Score {scoreValue}/100</span>

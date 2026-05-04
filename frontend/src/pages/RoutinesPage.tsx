@@ -142,8 +142,9 @@ export default function RoutinesPage() {
   };
 
   const fetchInsights = async () => {
+    if (!userId) return;
     try {
-      const insightRes = await skinAgeInsightsService.getInsights(userId!).catch(() => null);
+      const insightRes = await skinAgeInsightsService.getInsights(userId).catch(() => null);
       setSkinAgeInsight(insightRes);
     } catch (err) {
       console.error("Failed to fetch insights", err);
@@ -272,80 +273,15 @@ export default function RoutinesPage() {
         </div>
       )}
       <div className="max-w-6xl mx-auto px-4">
-        <div className="relative overflow-hidden rounded-3xl border border-teal-100/80 bg-white/80 backdrop-blur p-7 shadow-sm">
-          <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-teal-200/30 blur-2xl" />
-          <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-indigo-200/30 blur-2xl" />
-
-          <div className="relative flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-teal-100 bg-teal-50 px-3 py-1 text-xs font-bold uppercase tracking-widest text-teal-800">
-                <Sparkles size={14} />
-                {t('routines.builder', { defaultValue: 'Routine Builder' })}
-              </div>
-              {error && (
-                <div className="mt-3 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-600">
-                  {error}
-                </div>
-              )}
-
-              <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900">{t('routines.title', { defaultValue: 'Ta routine AM / PM' })}</h1>
-              <p className="mt-1 text-sm text-slate-600">
-                {t('routines.subtitle', { defaultValue: 'Coche chaque étape quand tu l’as faite. Objectif: une routine claire et régulière.' })}
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={handleDownloadReport}
-                disabled={isGeneratingPdf || !personalizationResult}
-                className="flex items-center gap-2 rounded-2xl border border-teal-200 bg-white px-5 py-3 text-sm font-bold text-teal-700 shadow-sm hover:bg-teal-50 disabled:opacity-50 transition-all"
-              >
-                {isGeneratingPdf ? (
-                  <RefreshCw size={18} className="animate-spin" />
-                ) : (
-                  <FileText size={18} />
-                )}
-                {t('routines.pdf', { defaultValue: 'Rapport PDF' })}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {(personalizationResult || latestAnalysis) && (
-          <div className="mt-6 animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="rounded-3xl border border-indigo-100 bg-indigo-50/50 p-6 backdrop-blur">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-4">
-                  <Sparkles className="text-indigo-600" size={20} />
-                  <h2 className="text-lg font-black text-slate-900">{t('routines.analysis_adjustments', { defaultValue: 'Analyse & Ajustements' })}</h2>
-                  <span className="ml-auto rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold text-indigo-700">
-                    {t('routines.skin', { defaultValue: 'Peau' })} {personalizationResult?.inferredSkinType || latestAnalysis?.aiRawResponse?.globalAnalysis?.dominantCondition || '...'}
-                  </span>
-                </div>
-
-                {personalizationResult?.trends && (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <TrendCard label="hydration" detail={personalizationResult?.trends.hydration} />
-                    <TrendCard label="sebum" detail={personalizationResult?.trends.oil} />
-                    <TrendCard label="acne" detail={personalizationResult?.trends.acne} />
-                    <TrendCard label="wrinkles" detail={personalizationResult?.trends.wrinkles} />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ══ SECTION: PRODUITS RECOMMANDÉS SVR (DYNAMIC AI) ══ */}
+        <RoutineHeader t={t} handleDownloadReport={handleDownloadReport} isGeneratingPdf={isGeneratingPdf} personalizationResult={personalizationResult} error={error} />
+        <AnalyticsAdjustments t={t} personalizationResult={personalizationResult} latestAnalysis={latestAnalysis} />
         <div className="mt-8 mb-8">
-
-
           {(personalizationResult || latestAnalysis) && (
             <div className="mt-2">
               <SvrRoutinePanel
                 key={`${personalizationResult?.personalizationId || 'initial'}-${latestAnalysis?.id || 'loading'}`}
                 profile={{
-                  skinType: (personalizationResult?.inferredSkinType || latestAnalysis?.aiRawResponse?.globalAnalysis?.dominantCondition || 'Normal') as any,
+                  skinType: (personalizationResult?.inferredSkinType || latestAnalysis?.aiRawResponse?.globalAnalysis?.dominantCondition || 'Normal'),
                   age: Number(localStorage.getItem('userAge')) || latestAnalysis?.realAge || latestAnalysis?.skinAge || 30,
                   gender: (localStorage.getItem('userGender') || 'Female') as 'Female' | 'Male' | 'Other',
                   concerns: personalizationResult?.adjustments?.map(adj => adj.reason) || latestAnalysis?.aiRawResponse?.conditionScores?.filter((c: any) => c.score && c.score > 40).map((c: any) => c.type) || [],
@@ -366,11 +302,81 @@ export default function RoutinesPage() {
             </div>
           )}
         </div>
-
         <div className="mt-12 text-center text-xs text-slate-400">
           {t('routines.tips', { defaultValue: 'Astuce: une routine simple et répétée donne de meilleurs résultats qu’une routine trop complexe.' })}
         </div>
       </div>
     </div>
   )
+}
+
+function RoutineHeader({ t, handleDownloadReport, isGeneratingPdf, personalizationResult, error }: any) {
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-teal-100/80 bg-white/80 backdrop-blur p-7 shadow-sm">
+      <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-teal-200/30 blur-2xl" />
+      <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-indigo-200/30 blur-2xl" />
+
+      <div className="relative flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-teal-100 bg-teal-50 px-3 py-1 text-xs font-bold uppercase tracking-widest text-teal-800">
+            <Sparkles size={14} />
+            {t('routines.builder', { defaultValue: 'Routine Builder' })}
+          </div>
+          {error && (
+            <div className="mt-3 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-600">
+              {error}
+            </div>
+          )}
+
+          <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900">{t('routines.title', { defaultValue: 'Ta routine AM / PM' })}</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            {t('routines.subtitle', { defaultValue: 'Coche chaque étape quand tu l’as faite. Objectif: une routine claire et régulière.' })}
+          </p>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={handleDownloadReport}
+            disabled={isGeneratingPdf || !personalizationResult}
+            className="flex items-center gap-2 rounded-2xl border border-teal-200 bg-white px-5 py-3 text-sm font-bold text-teal-700 shadow-sm hover:bg-teal-50 disabled:opacity-50 transition-all"
+          >
+            {isGeneratingPdf ? (
+              <RefreshCw size={18} className="animate-spin" />
+            ) : (
+              <FileText size={18} />
+            )}
+            {t('routines.pdf', { defaultValue: 'Rapport PDF' })}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AnalyticsAdjustments({ t, personalizationResult, latestAnalysis }: any) {
+  if (!personalizationResult && !latestAnalysis) return null;
+  return (
+    <div className="mt-6 animate-in fade-in slide-in-from-top-4 duration-500">
+      <div className="rounded-3xl border border-indigo-100 bg-indigo-50/50 p-6 backdrop-blur">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="text-indigo-600" size={20} />
+            <h2 className="text-lg font-black text-slate-900">{t('routines.analysis_adjustments', { defaultValue: 'Analyse & Ajustements' })}</h2>
+            <span className="ml-auto rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold text-indigo-700">
+              {t('routines.skin', { defaultValue: 'Peau' })} {personalizationResult?.inferredSkinType || latestAnalysis?.aiRawResponse?.globalAnalysis?.dominantCondition || '...'}
+            </span>
+          </div>
+
+          {personalizationResult?.trends && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <TrendCard label="hydration" detail={personalizationResult?.trends.hydration} />
+              <TrendCard label="sebum" detail={personalizationResult?.trends.oil} />
+              <TrendCard label="acne" detail={personalizationResult?.trends.acne} />
+              <TrendCard label="wrinkles" detail={personalizationResult?.trends.wrinkles} />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
