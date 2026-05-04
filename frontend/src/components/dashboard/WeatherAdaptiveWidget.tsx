@@ -8,15 +8,31 @@ export function WeatherAdaptiveWidget() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const [hasConsent, setHasConsent] = useState(() => localStorage.getItem('weather-consent') === 'true');
+  const [isDenied, setIsDenied] = useState(false);
+
+  const fetchData = async (forceConsent = false) => {
+    if (!hasConsent && !forceConsent) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
       const weatherData = await weatherService.getWeatherData();
       setData(weatherData);
       setAdvice(weatherService.getAdvice(weatherData));
+      if (forceConsent) {
+        setHasConsent(true);
+        localStorage.setItem('weather-consent', 'true');
+      }
     } catch (err) {
       console.error('Weather error:', err);
+      // Si l'erreur est liée au refus de permission
+      if (err instanceof Error && err.message.includes('User denied')) {
+        setIsDenied(true);
+      }
       setError('Impossible de récupérer la météo locale.');
     } finally {
       setLoading(false);
@@ -25,7 +41,7 @@ export function WeatherAdaptiveWidget() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [hasConsent]);
 
   if (loading) {
     return (
@@ -36,6 +52,26 @@ export function WeatherAdaptiveWidget() {
           <div className="h-8 bg-gray-100 rounded w-1/4"></div>
           <div className="h-8 bg-gray-100 rounded w-1/4"></div>
         </div>
+      </div>
+    );
+  }
+
+  if (!hasConsent && !loading) {
+    return (
+      <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm transition-all hover:shadow-md">
+        <div className="flex items-center gap-2 text-teal-600 mb-2">
+          <MapPin size={16} />
+          <span className="text-xs font-bold uppercase tracking-wider">Météo Locale</span>
+        </div>
+        <p className="text-xs text-gray-600 mb-4">
+          Activez la géolocalisation pour recevoir des conseils de soin adaptés à votre environnement (UV, humidité).
+        </p>
+        <button
+          onClick={() => fetchData(true)}
+          className="w-full py-2 bg-teal-600 text-white rounded-xl text-xs font-bold hover:bg-teal-700 transition-colors shadow-sm shadow-teal-100"
+        >
+          Détecter ma position
+        </button>
       </div>
     );
   }
