@@ -14,6 +14,7 @@ pipeline {
         IMAGE_NAME      = "${PROJECT_NAME}-${SERVICE_NAME}"
         IMAGE_TAG       = "${env.BUILD_NUMBER}"
         PORT            = '3001'
+        SONAR_HOST_URL  = "http://172.20.10.18:9000"
     }
 
     stages {
@@ -65,16 +66,21 @@ pipeline {
             steps {
                 echo "📊 Analyse du code avec SonarQube..."
                 withSonarQubeEnv('sonarqube') {
-                    sh '''
-                        cd backend
-                        npx --yes sonarqube-scanner \
-                          -Dsonar.projectKey=${PROJECT_NAME}-${SERVICE_NAME} \
-                          -Dsonar.sources=src \
-                          -Dsonar.tests=src \
-                          -Dsonar.test.inclusions="**/*.spec.ts" \
-                          -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
-                          -Dsonar.exclusions="**/*.spec.ts,dist/**,node_modules/**"
-                    '''
+                    timeout(time: 10, unit: 'MINUTES') {
+                        sh '''
+                            cd backend
+                            npx sonarqube-scanner \
+                              -X \
+                              -Dsonar.host.url=${SONAR_HOST_URL} \
+                              -Dsonar.projectKey=${PROJECT_NAME}-${SERVICE_NAME} \
+                              -Dsonar.sources=src \
+                              -Dsonar.tests=src \
+                              -Dsonar.test.inclusions="**/*.spec.ts" \
+                              -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
+                              -Dsonar.verbose=true \
+                              -Dsonar.exclusions="**/*.spec.ts,dist/**,node_modules/**"
+                        '''
+                    }
                 }
             }
         }
