@@ -13,7 +13,8 @@ pipeline {
         CONTAINER_NAME  = 'deepskyn-backend'
         DB_CONTAINER    = 'deepskyn-db'
         NETWORK_NAME    = 'deepskyn_network'
-        IMAGE_NAME      = "${PROJECT_NAME}-${SERVICE_NAME}"
+        DOCKER_USER     = 'skanderbensalah1'
+        IMAGE_NAME      = "${DOCKER_USER}/${PROJECT_NAME}-${SERVICE_NAME}"
         IMAGE_TAG       = "${env.BUILD_NUMBER}"
         PORT            = '3001'
     }
@@ -60,10 +61,16 @@ pipeline {
             }
         }
 
-        stage('🐳 Docker Build') {
+        stage('🐳 Docker Build & Push') {
             steps {
-                echo "🐳 Construction de l'image..."
+                echo "🐳 Construction et Push de l'image Docker..."
                 sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -t ${IMAGE_NAME}:latest ./backend"
+                
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                    sh "echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin"
+                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+                    sh "docker push ${IMAGE_NAME}:latest"
+                }
             }
         }
 
