@@ -73,6 +73,7 @@ async function bootstrap() {
     '/api/chat/message',          // Ajouté pour test
     '/api/chat/history',
     '/api/chat/start',
+    'https://deepskynn.vercel.app',
   ];
 
   const csrfProtection = csrf({
