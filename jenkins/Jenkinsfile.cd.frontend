@@ -71,8 +71,17 @@ pipeline {
                 
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
                     sh "echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin"
-                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
-                    sh "docker push ${IMAGE_NAME}:latest"
+                    
+                    retry(3) {
+                        timeout(time: 20, unit: 'MINUTES') {
+                            sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+                        }
+                    }
+                    retry(3) {
+                        timeout(time: 20, unit: 'MINUTES') {
+                            sh "docker push ${IMAGE_NAME}:latest"
+                        }
+                    }
                 }
             }
         }
