@@ -15,63 +15,63 @@ import { SkinCondition } from './skin-condition.enum';
 
 describe('AiAnalysisService', () => {
   let service: AiAnalysisService;
-  
+  //testt
   // Mocks
   const mockFakeAiService = {
     analyzeImage: jest.fn(),
     generateTestCase: jest.fn(),
     generateRandomDetections: jest.fn(),
   };
-  
+
   const mockDetectionAdapter = {
     validateDetections: jest.fn(),
     aggregateDetections: jest.fn(),
   };
-  
+
   const mockScoringEngine = {
     computeConditionScores: jest.fn(),
     calculateGlobalScore: jest.fn(),
     getDefaultWeights: jest.fn(),
     validateWeights: jest.fn(),
   };
-  
+
   const mockOpenRouterService = {
     analyzeSkin: jest.fn(),
     estimateSkinAge: jest.fn(),
     predictFutureSkinState: jest.fn(),
   };
-  
+
   const mockRecommendationService = {
     getRecommendationsForSkinState: jest.fn(),
   };
-  
+
   const mockIncompatibilityService = {
     checkRoutine: jest.fn(),
   };
-  
+
   const mockSubscriptionService = {
     checkAnalysisLimit: jest.fn(),
     getSubscription: jest.fn(),
     incrementImages: jest.fn(),
   };
-  
+
   const mockAnalysisRepo = {
     create: jest.fn(),
     save: jest.fn(),
   };
-  
+
   const mockMetricRepo = {
     create: jest.fn(),
     save: jest.fn(),
   };
-  
+
   const mockProfileRepo = {
     findOne: jest.fn(),
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    
+
     // Default mock behaviors
     mockSubscriptionService.checkAnalysisLimit.mockResolvedValue({ allowed: true });
     mockSubscriptionService.getSubscription.mockResolvedValue({ plan: 'FREE' });
@@ -103,7 +103,7 @@ describe('AiAnalysisService', () => {
   describe('analyzeImage (Legacy/FakeAI path)', () => {
     it('should throw an error if analysis limit is reached', async () => {
       mockSubscriptionService.checkAnalysisLimit.mockResolvedValueOnce({ allowed: false });
-      
+
       await expect(service.analyzeImage('image-1', {}, undefined, 'user-1'))
         .rejects.toThrow('AI analysis failed: LIMIT_REACHED');
     });
@@ -111,7 +111,7 @@ describe('AiAnalysisService', () => {
     it('should throw an error if detections are invalid', async () => {
       mockFakeAiService.analyzeImage.mockResolvedValueOnce([]);
       mockDetectionAdapter.validateDetections.mockReturnValueOnce(false);
-      
+
       await expect(service.analyzeImage('image-1', {}, undefined, 'user-1'))
         .rejects.toThrow('AI analysis failed: Invalid detection format from AI model');
     });
@@ -128,7 +128,7 @@ describe('AiAnalysisService', () => {
       mockRecommendationService.getRecommendationsForSkinState.mockResolvedValueOnce([{ id: 1, name: 'SVR' }]);
 
       const result = await service.analyzeImage('image-1');
-      
+
       expect(result.globalScore).toBe(80);
       expect(result.recommendations).toBeDefined();
       expect(mockAnalysisRepo.save).not.toHaveBeenCalled(); // Guest mode = no save
@@ -146,13 +146,13 @@ describe('AiAnalysisService', () => {
         globalScore: 60,
         conditionScores: [{ type: SkinCondition.WRINKLES, score: 30 }]
       });
-      
+
       mockAnalysisRepo.create.mockReturnValueOnce({ id: 'analysis-123' });
       mockAnalysisRepo.save.mockResolvedValueOnce({ id: 'analysis-123' });
       mockMetricRepo.create.mockReturnValue({ id: 'metric-1' });
-      
+
       await service.analyzeImage('image-1', {}, undefined, 'user-1', 30);
-      
+
       expect(mockAnalysisRepo.save).toHaveBeenCalled();
       expect(mockMetricRepo.save).toHaveBeenCalled();
       expect(mockSubscriptionService.incrementImages).toHaveBeenCalledWith('user-1');
@@ -169,7 +169,7 @@ describe('AiAnalysisService', () => {
 
     it('should throw LIMIT_REACHED if user has no credits', async () => {
       mockSubscriptionService.checkAnalysisLimit.mockResolvedValueOnce({ allowed: false });
-      
+
       await expect(service.analyzeSkinWithLLM(mockProfile, 'user-1'))
         .rejects.toThrow('LLM Analysis failed: LIMIT_REACHED');
     });
@@ -182,7 +182,7 @@ describe('AiAnalysisService', () => {
         ]
       });
       mockOpenRouterService.estimateSkinAge.mockResolvedValueOnce({ skinAge: 32, rationale: 'Looks older' });
-      
+
       mockAnalysisRepo.create.mockReturnValueOnce({ id: 'analysis-llm-1' });
       mockAnalysisRepo.save.mockResolvedValueOnce({ id: 'analysis-llm-1' });
       mockMetricRepo.create.mockReturnValue({});
@@ -216,9 +216,9 @@ describe('AiAnalysisService', () => {
         globalScore: 0,
         conditionScores: []
       });
-      
+
       const result = await service.analyzeSkinWithLLM(profileNoPhoto, 'user-1');
-      
+
       expect(result.metaWeighting.userWeight).toBe(1);
       expect(result.metaWeighting.aiWeight).toBe(0);
       expect(result.conditionScores.some(c => c.type === SkinCondition.ACNE && c.evaluated === true)).toBe(true);
@@ -231,18 +231,18 @@ describe('AiAnalysisService', () => {
       mockDetectionAdapter.aggregateDetections.mockReturnValueOnce([]);
       mockScoringEngine.computeConditionScores.mockReturnValueOnce([]);
       mockScoringEngine.calculateGlobalScore.mockReturnValueOnce({ globalScore: 75, conditionScores: [] });
-      
+
       await service.analyzeWithRandomDetections(123, {}, 'user-1');
-      
+
       expect(mockAnalysisRepo.save).toHaveBeenCalled();
     });
 
     it('should not save if userId is missing', async () => {
       mockFakeAiService.generateRandomDetections.mockReturnValueOnce([]);
       mockScoringEngine.calculateGlobalScore.mockReturnValueOnce({ globalScore: 75 });
-      
+
       await service.analyzeWithRandomDetections(123);
-      
+
       expect(mockAnalysisRepo.save).not.toHaveBeenCalled();
     });
   });
