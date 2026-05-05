@@ -15,7 +15,7 @@ spec:
             pathType: ImplementationSpecific
             backend:
               service:
-                name: frontend-service
+                name: frontend
                 port:
                   number: 80
     - host: api.deepskyn.local
@@ -25,6 +25,6 @@ spec:
             pathType: ImplementationSpecific
             backend:
               service:
-                name: backend-service
+                name: backend
                 port:
                   number: 3001

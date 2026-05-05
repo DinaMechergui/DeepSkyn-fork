@@ -15,7 +15,7 @@ pipeline {
         DOCKER_USER     = 'skanderbensalah1'
         IMAGE_NAME      = "${DOCKER_USER}/${PROJECT_NAME}-${SERVICE_NAME}"
         IMAGE_TAG       = "${env.BUILD_NUMBER}"
-        VITE_API_URL    = "http://localhost:3001/api"
+        VITE_API_URL    = "http://api.deepskyn.local/api"
         VITE_GOOGLE_ID  = "203522484031-m9h6cfvjleufa23gir16pujbnctchqch.apps.googleusercontent.com"
     }
 
