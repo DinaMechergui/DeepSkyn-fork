@@ -25,6 +25,8 @@ spec:
         env:
         - name: DB_HOST
           value: "postgres"
+        - name: DATABASE_URL
+          value: "postgresql://postgres:skan2001@postgres:5432/deepskyn_db"
         - name: FRONTEND_URL
           value: "http://deepskyn.local"
 ---
