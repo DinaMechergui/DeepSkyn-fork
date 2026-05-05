@@ -32,7 +32,7 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // ✅ Augmenter la limite pour les images Base64 + Capture du Raw Body pour Stripe
-  app.use(json({ 
+  app.use(json({
     limit: '50mb',
     verify: (req: any, res: any, buf: Buffer) => {
       if (req.originalUrl.includes('/api/payments/webhook')) {
@@ -72,6 +72,7 @@ async function bootstrap() {
     '/api/ai/svr-routine',        // Nouveau
     '/api/chat/message',          // Ajouté pour test
     '/api/chat/history',
+    '/api/chat/start',
   ];
 
   const csrfProtection = csrf({
