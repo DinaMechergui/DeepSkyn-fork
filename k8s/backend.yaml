@@ -22,6 +22,11 @@ spec:
         envFrom:
         - secretRef:
             name: backend-secrets
+        env:
+        - name: DB_HOST
+          value: "postgres"
+        - name: FRONTEND_URL
+          value: "http://deepskyn.local"
 ---
 apiVersion: v1
 kind: Service
