@@ -16,6 +16,7 @@ import { SkinCondition } from './skin-condition.enum';
 describe('AiAnalysisService', () => {
   let service: AiAnalysisService;
   //testt
+  //dddddd
   // Mocks
   const mockFakeAiService = {
     analyzeImage: jest.fn(),
