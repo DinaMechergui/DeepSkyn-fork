@@ -94,6 +94,7 @@ pipeline {
                     cp -r k8s k8s-dev
                     sed -i "s|deepskyn-frontend:latest|${IMAGE_NAME}:latest|g" k8s-dev/frontend.yaml
                     sed -i 's/namespace: deepskyn/namespace: dev/g' k8s-dev/*.yaml
+                    sed -i 's/nodePort: 30080/nodePort: 30080/g' k8s-dev/frontend.yaml
                     
                     kubectl apply -f k8s-dev/frontend.yaml
                     if [ -f k8s-dev/ingress.yaml ]; then
@@ -113,6 +114,7 @@ pipeline {
                     cp -r k8s k8s-staging
                     sed -i "s|deepskyn-frontend:latest|${IMAGE_NAME}:latest|g" k8s-staging/frontend.yaml
                     sed -i 's/namespace: deepskyn/namespace: staging/g' k8s-staging/*.yaml
+                    sed -i 's/nodePort: 30080/nodePort: 30081/g' k8s-staging/frontend.yaml
                     
                     kubectl apply -f k8s-staging/frontend.yaml
                     if [ -f k8s-staging/ingress.yaml ]; then
@@ -136,6 +138,7 @@ pipeline {
                     cp -r k8s k8s-prod
                     sed -i "s|deepskyn-frontend:latest|${IMAGE_NAME}:latest|g" k8s-prod/frontend.yaml
                     sed -i 's/namespace: deepskyn/namespace: prod/g' k8s-prod/*.yaml
+                    sed -i 's/nodePort: 30080/nodePort: 30082/g' k8s-prod/frontend.yaml
                     
                     kubectl apply -f k8s-prod/frontend.yaml
                     if [ -f k8s-prod/ingress.yaml ]; then
