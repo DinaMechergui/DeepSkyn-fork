@@ -64,30 +64,73 @@ pipeline {
             }
         }
 
-        stage('🚀 Deployment') {
+        stage('🚀 Deploy DEV') {
             steps {
-                echo "🚀 Déploiement du Frontend sur Kubernetes..."
+                echo "🚀 Déploiement FRONTEND sur DEV..."
+                sh 'kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -'
                 sh '''
-                    # Remplacer le nom de l'image dans le fichier yaml
-                    sed -i "s|deepskyn-frontend:latest|${IMAGE_NAME}:latest|g" k8s/frontend.yaml
+                    cp -r k8s k8s-dev
+                    sed -i "s|deepskyn-frontend:latest|${IMAGE_NAME}:latest|g" k8s-dev/frontend.yaml
+                    sed -i 's/namespace: deepskyn/namespace: dev/g' k8s-dev/*.yaml
                     
-                    kubectl apply -f k8s/namespace.yaml
-                    kubectl apply -f k8s/frontend.yaml
-                    
-                    # Déployer ingress si présent
-                    if [ -f k8s/ingress.yaml ]; then
-                        kubectl apply -f k8s/ingress.yaml
+                    kubectl apply -f k8s-dev/frontend.yaml
+                    if [ -f k8s-dev/ingress.yaml ]; then
+                        kubectl apply -f k8s-dev/ingress.yaml
                     fi
                     
-                    # Attendre que le déploiement soit prêt
-                    kubectl rollout status deployment/frontend -n deepskyn
+                    kubectl rollout status deployment/frontend -n dev
+                '''
+            }
+        }
+
+        stage('🚀 Deploy STAGING') {
+            steps {
+                echo "🚀 Déploiement FRONTEND sur STAGING..."
+                sh 'kubectl create namespace staging --dry-run=client -o yaml | kubectl apply -f -'
+                sh '''
+                    cp -r k8s k8s-staging
+                    sed -i "s|deepskyn-frontend:latest|${IMAGE_NAME}:latest|g" k8s-staging/frontend.yaml
+                    sed -i 's/namespace: deepskyn/namespace: staging/g' k8s-staging/*.yaml
+                    
+                    kubectl apply -f k8s-staging/frontend.yaml
+                    if [ -f k8s-staging/ingress.yaml ]; then
+                        kubectl apply -f k8s-staging/ingress.yaml
+                    fi
+                    
+                    kubectl rollout status deployment/frontend -n staging
+                '''
+            }
+        }
+
+        stage('🔥 Deploy PROD') {
+            input {
+                message "⚠️ Déployer le FRONTEND en PRODUCTION ?"
+                ok "Oui, déployer !"
+            }
+            steps {
+                echo "🔥 Déploiement FRONTEND sur PROD..."
+                sh 'kubectl create namespace prod --dry-run=client -o yaml | kubectl apply -f -'
+                sh '''
+                    cp -r k8s k8s-prod
+                    sed -i "s|deepskyn-frontend:latest|${IMAGE_NAME}:latest|g" k8s-prod/frontend.yaml
+                    sed -i 's/namespace: deepskyn/namespace: prod/g' k8s-prod/*.yaml
+                    
+                    kubectl apply -f k8s-prod/frontend.yaml
+                    if [ -f k8s-prod/ingress.yaml ]; then
+                        kubectl apply -f k8s-prod/ingress.yaml
+                    fi
+                    
+                    kubectl rollout status deployment/frontend -n prod
                 '''
             }
         }
     }
 
     post {
-        success { echo "✅ Frontend déployé ! http://localhost" }
+        always {
+            sh 'rm -rf k8s-dev k8s-staging k8s-prod || true'
+        }
+        success { echo "✅ Déploiement Frontend réussi pour tous les environnements !" }
         failure { echo "❌ Échec du déploiement Frontend." }
     }
 }

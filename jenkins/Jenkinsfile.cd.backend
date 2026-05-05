@@ -61,26 +61,67 @@ pipeline {
             }
         }
 
-        stage('🚀 Deployment') {
+        stage('🚀 Deploy DEV') {
             steps {
-                echo "🚀 Déploiement sur Kubernetes..."
+                echo "🚀 Déploiement BACKEND sur DEV..."
+                sh 'kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -'
                 sh '''
-                    # Remplacer le nom de l'image dans le fichier yaml
-                    sed -i "s|deepskyn-backend:latest|${IMAGE_NAME}:latest|g" k8s/backend.yaml
+                    cp -r k8s k8s-dev
+                    sed -i "s|deepskyn-backend:latest|${IMAGE_NAME}:latest|g" k8s-dev/backend.yaml
+                    sed -i 's/namespace: deepskyn/namespace: dev/g' k8s-dev/*.yaml
                     
-                    kubectl apply -f k8s/namespace.yaml
-                    kubectl apply -f k8s/postgres.yaml
-                    kubectl apply -f k8s/backend.yaml
+                    kubectl apply -f k8s-dev/postgres.yaml
+                    kubectl apply -f k8s-dev/backend.yaml
                     
-                    # Attendre que le déploiement soit prêt
-                    kubectl rollout status deployment/backend -n deepskyn
+                    kubectl rollout status deployment/backend -n dev
+                '''
+            }
+        }
+
+        stage('🚀 Deploy STAGING') {
+            steps {
+                echo "🚀 Déploiement BACKEND sur STAGING..."
+                sh 'kubectl create namespace staging --dry-run=client -o yaml | kubectl apply -f -'
+                sh '''
+                    cp -r k8s k8s-staging
+                    sed -i "s|deepskyn-backend:latest|${IMAGE_NAME}:latest|g" k8s-staging/backend.yaml
+                    sed -i 's/namespace: deepskyn/namespace: staging/g' k8s-staging/*.yaml
+                    
+                    kubectl apply -f k8s-staging/postgres.yaml
+                    kubectl apply -f k8s-staging/backend.yaml
+                    
+                    kubectl rollout status deployment/backend -n staging
+                '''
+            }
+        }
+
+        stage('🔥 Deploy PROD') {
+            input {
+                message "⚠️ Déployer le BACKEND en PRODUCTION ?"
+                ok "Oui, déployer !"
+            }
+            steps {
+                echo "🔥 Déploiement BACKEND sur PROD..."
+                sh 'kubectl create namespace prod --dry-run=client -o yaml | kubectl apply -f -'
+                sh '''
+                    cp -r k8s k8s-prod
+                    sed -i "s|deepskyn-backend:latest|${IMAGE_NAME}:latest|g" k8s-prod/backend.yaml
+                    sed -i 's/namespace: deepskyn/namespace: prod/g' k8s-prod/*.yaml
+                    
+                    kubectl apply -f k8s-prod/postgres.yaml
+                    kubectl apply -f k8s-prod/backend.yaml
+                    
+                    kubectl rollout status deployment/backend -n prod
                 '''
             }
         }
     }
 
     post {
-        success { echo "✅ Déploiement réussi ! http://localhost:${PORT}" }
-        failure { echo "❌ Déploiement échoué." }
+        always {
+            sh 'rm -rf k8s-dev k8s-staging k8s-prod || true'
+        }
+        success { echo "✅ Déploiement Backend réussi pour tous les environnements !" }
+        failure { echo "❌ Déploiement Backend échoué." }
     }
 }
