@@ -15,7 +15,7 @@ pipeline {
         VITE_API_URL    = "http://localhost:3001/api"
         VITE_GOOGLE_ID  = "203522484031-m9h6cfvjleufa23gir16pujbnctchqch.apps.googleusercontent.com"
         // IP de la passerelle Docker (Vérifiée via Diagnostic Réseau)
-        SONAR_HOST_URL  = "http://172.17.0.1:9000"
+        SONAR_HOST_URL  = "http://172.20.10.5:9000"
     }
 
     stages {
