@@ -17,6 +17,7 @@ describe('AiAnalysisService', () => {
   let service: AiAnalysisService;
   //testt
   //dddddd
+  //wxx
   // Mocks
   const mockFakeAiService = {
     analyzeImage: jest.fn(),
