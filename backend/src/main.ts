@@ -11,6 +11,8 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  const isProduction = process.env.NODE_ENV === 'production';
+
   // ✅ CORS - Multiple origins autorisés
   const corsOrigins = [
     process.env.CORS_ORIGIN,
@@ -25,11 +27,13 @@ async function bootstrap() {
     origin: corsOrigins,
     credentials: true,
     exposedHeaders: ['X-CSRF-Token'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   app.setGlobalPrefix('api');
   app.use(cookieParser());
-  
+
   // ✅ Augmenter la limite pour les images Base64
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ limit: '50mb', extended: true }));
@@ -81,24 +85,30 @@ async function bootstrap() {
     '/api/ai/debug',
   ];
 
+  // ✅ FIX PRINCIPAL : sameSite 'none' en production pour le cross-origin
   const csrfProtection = csrf({
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProduction,                          // true en prod (HTTPS obligatoire)
+      sameSite: isProduction ? 'none' : 'strict',   // ✅ 'none' pour cross-origin en prod
     },
   });
 
   // ✅ CSRF Middleware avec normalisation du chemin
   app.use((req: any, res: any, next: any) => {
     // Normaliser le chemin : retirer le slash final et ignorer les query params
-    let path = (req.baseUrl + req.path).replace(/\/$/, "");
+    let path = (req.baseUrl + req.path).replace(/\/$/, '');
     if (!path.startsWith('/')) path = '/' + path;
 
-    const isPublic = publicRoutes.some(p => p.replace(/\/$/, "") === path);
+    const isPublic = publicRoutes.some(
+      (p) => p.replace(/\/$/, '') === path,
+    );
 
-    console.log(`[CSRF-Debug] Method: ${req.method} | Path: ${path} | IsPublic: ${isPublic}`);
+    console.log(
+      `[CSRF-Debug] Method: ${req.method} | Path: ${path} | IsPublic: ${isPublic}`,
+    );
 
+    // ✅ Route pour récupérer le token CSRF
     if (path === '/api/auth/csrf-token' || path === '/auth/csrf-token') {
       return csrfProtection(req, res, () => {
         const token = req.csrfToken();
@@ -107,6 +117,7 @@ async function bootstrap() {
       });
     }
 
+    // ✅ Appliquer CSRF uniquement sur les routes protégées
     if (!isPublic && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
       return csrfProtection(req, res, next);
     }
@@ -131,6 +142,7 @@ async function bootstrap() {
   console.log(`📚 Swagger docs at http://localhost:${port}/docs`);
   console.log(`🔐 CSRF Protection: Enabled (on protected routes)`);
   console.log(`🌐 CORS Origins:`, corsOrigins);
+  console.log(`🍪 SameSite Cookie: ${isProduction ? 'none' : 'strict'}`);
 }
 
 bootstrap();
