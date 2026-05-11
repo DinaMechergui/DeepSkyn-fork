@@ -100,8 +100,7 @@ async function bootstrap() {
   // ✅ CSRF Middleware avec normalisation du chemin
   app.use((req: any, res: any, next: any) => {
     // Normaliser le chemin : retirer le slash final et ignorer les query params
-    let path = (req.baseUrl + req.path).replace(/\/$/, '');
-    if (!path.startsWith('/')) path = '/' + path;
+let path = req.originalUrl.split('?')[0].replace(/\/$/, '');    if (!path.startsWith('/')) path = '/' + path;
 
     const isPublic = publicRoutes.some(
       (p) => p.replace(/\/$/, '') === path,
