@@ -18,9 +18,6 @@ export class CsrfMiddleware implements NestMiddleware {
     '/auth/register',
     '/auth/2fa/verify',
     '/auth/csrf-token',
-     '/api/ai/skin-risk',      // ✅ ajouté
-    '/api/ai/skin-alerts',    // ✅ ajouté
-    '/api/ai/recommendations',
   ];
 
   use(req: Request, res: Response, next: NextFunction) {
