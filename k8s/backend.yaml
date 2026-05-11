@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: deepskyn
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: deepskyn-backend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3001
+        envFrom:
+        - secretRef:
+            name: backend-secrets
+        env:
+        - name: DB_HOST
+          value: "postgres"
+        - name: DATABASE_URL
+          value: "postgresql://postgres:skan2001@postgres:5432/deepskyn_db"
+        - name: FRONTEND_URL
+          value: "http://deepskyn.local"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: deepskyn
+spec:
+  type: ClusterIP
+  selector:
+    app: backend
+  ports:
+  - port: 3001
+    targetPort: 3001

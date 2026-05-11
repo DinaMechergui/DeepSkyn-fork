@@ -10,6 +10,7 @@ import { historyService } from "@/services/historyService"
 import { useGoogleAuth } from "@/hooks/useGoogleAuth"
 import { saveTwoFASession } from "@/lib/twoFASession"
 import { loginSchema } from "@/lib/schemas/auth"
+import { z } from "zod"
 import ReCAPTCHA from "react-google-recaptcha"
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api"
@@ -34,7 +35,53 @@ export default function LoginPage() {
     console.log('🔐 Captcha validated:', token ? 'Yes' : 'No')
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLoginError = async (errorMessage: string) => {
+    setError(errorMessage)
+    if (recaptchaRef.current) recaptchaRef.current.reset()
+    setCaptchaToken(null)
+    await historyService.recordLoginAttempt({
+      loginMethod: 'email',
+      status: 'failed',
+      failureReason: errorMessage,
+      used2FA: false,
+    })
+  }
+
+  const handleLoginSuccess = async (data: any) => {
+    console.log('Login session set:', data)
+
+    if (!data.refreshToken) {
+      console.warn('Refresh token missing from login response')
+      setError('Login successful but session may not persist properly')
+    }
+
+    setSession({
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken || '',
+      accessTokenExpiresAt: data.accessTokenExpiresAt,
+      refreshTokenExpiresAt: data.refreshTokenExpiresAt,
+      user: data.user,
+    })
+
+    localStorage.setItem('token', data.accessToken)
+    console.log('✅ Token saved in localStorage for sessions')
+    localStorage.removeItem('auth-session')
+
+    await historyService.recordLoginAttempt({
+      loginMethod: 'email',
+      status: 'success',
+      used2FA: false,
+    })
+
+    const userRole = data.user?.role?.toLowerCase()
+    if (userRole === 'admin') {
+      navigate("/admin", { replace: true })
+    } else {
+      navigate("/", { replace: true })
+    }
+  }
+
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     setError("")
     setFieldErrors({})
@@ -46,10 +93,10 @@ export default function LoginPage() {
 
     const parsed = loginSchema.safeParse({ email, password })
     if (!parsed.success) {
-      const flattened = parsed.error.flatten().fieldErrors
+      const tree = z.treeifyError(parsed.error);
       setFieldErrors({
-        email: flattened.email?.[0] ?? "",
-        password: flattened.password?.[0] ?? "",
+        email: tree.properties?.email?.errors?.[0] ?? "",
+        password: tree.properties?.password?.errors?.[0] ?? "",
       })
       return
     }
@@ -70,25 +117,12 @@ export default function LoginPage() {
 
       if (!res.ok) {
         const errorMessage = Array.isArray(data.message) ? data.message.join(", ") : (data.message || "Incorrect email or password.")
-        setError(errorMessage)
-
-        if (recaptchaRef.current) {
-          recaptchaRef.current.reset()
-        }
-        setCaptchaToken(null)
-
-        await historyService.recordLoginAttempt({
-          loginMethod: 'email',
-          status: 'failed',
-          failureReason: errorMessage,
-          used2FA: false,
-        })
-
+        await handleLoginError(errorMessage)
         return
       }
 
       if (data.requiresTwoFa) {
-        saveTwoFASession(data);
+        saveTwoFASession(data)
         navigate("/auth/2fa", {
           state: {
             loginData: data,
@@ -98,52 +132,9 @@ export default function LoginPage() {
         return
       }
 
-      console.log('Login session set:', data)
-
-      if (!data.refreshToken) {
-        console.warn('Refresh token missing from login response')
-        setError('Login successful but session may not persist properly')
-      }
-
-      setSession({
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken || '',
-        accessTokenExpiresAt: data.accessTokenExpiresAt,
-        refreshTokenExpiresAt: data.refreshTokenExpiresAt,
-        user: data.user,
-      })
-
-      localStorage.setItem('token', data.accessToken)
-      console.log('✅ Token saved in localStorage for sessions')
-      localStorage.removeItem('auth-session');
-
-      await historyService.recordLoginAttempt({
-        loginMethod: 'email',
-        status: 'success',
-        used2FA: false,
-      })
-
-      // Rediriger vers /admin si l'utilisateur est admin, sinon vers /
-      const userRole = data.user?.role?.toLowerCase()
-      if (userRole === 'admin') {
-        navigate("/admin", { replace: true })
-      } else {
-        navigate("/", { replace: true })
-      }
+      await handleLoginSuccess(data)
     } catch {
-      setError("Unable to reach the server. Please check that the backend is running.")
-
-      if (recaptchaRef.current) {
-        recaptchaRef.current.reset()
-      }
-      setCaptchaToken(null)
-
-      await historyService.recordLoginAttempt({
-        loginMethod: 'email',
-        status: 'failed',
-        failureReason: 'Server error',
-        used2FA: false,
-      })
+      await handleLoginError("Unable to reach the server. Please check that the backend is running.")
     } finally {
       setIsLoading(false)
     }

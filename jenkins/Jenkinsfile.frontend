@@ -1,0 +1,102 @@
+pipeline {
+    agent any
+
+    tools {
+        nodejs 'Node18'
+    }
+
+    environment {
+        PROJECT_NAME    = 'deepskyn'
+        SERVICE_NAME    = 'frontend'
+        CONTAINER_NAME  = 'deepskyn-frontend'
+        NETWORK_NAME    = 'deepskyn_network'
+        IMAGE_NAME      = "${PROJECT_NAME}-${SERVICE_NAME}"
+        IMAGE_TAG       = "${env.BUILD_NUMBER}"
+        VITE_API_URL    = "http://localhost:3001/api"
+        VITE_GOOGLE_ID  = "203522484031-m9h6cfvjleufa23gir16pujbnctchqch.apps.googleusercontent.com"
+        // IP de la passerelle Docker (Vérifiée via Diagnostic Réseau)
+        SONAR_HOST_URL  = "http://172.20.10.5:9000"
+    }
+
+    stages {
+        stage('🔍 Diagnostic Réseau') {
+            steps {
+                echo "--- Vérification du réseau Jenkins ---"
+                sh "cat /etc/hosts"
+                sh "getent hosts github.com || echo 'DNS : github.com inconnu'"
+                echo "--- Test de connexion SonarQube ---"
+                sh "curl -v http://172.20.10.5:9000/api/system/status --connect-timeout 2 || echo 'FAIL: 172.20.10.5 injoignable'"
+                sh "curl -v http://172.17.0.1:9000/api/system/status --connect-timeout 2 || echo 'FAIL: 172.17.0.1 injoignable'"
+            }
+        }
+
+        stage('📦 Checkout') {
+            steps {
+                echo "📦 Récupération du code depuis GitHub..."
+                script {
+                    try {
+                        git branch: 'master', url: 'https://github.com/rouabougattaya/DeepSkyn.git'
+                    } catch (Exception e) {
+                        echo "⚠️ Échec DNS, tentative via IP directe..."
+                        sh "git config --global http.sslVerify false"
+                        git branch: 'master', url: 'https://140.82.121.3/rouabougattaya/DeepSkyn.git'
+                    }
+                }
+            }
+        }
+
+        stage('📦 Install Dependencies') {
+            steps {
+                echo "📦 Installation des dépendances Frontend..."
+                sh 'cd frontend && npm install --legacy-peer-deps'
+            }
+        }
+
+        stage('🧪 Tests & Coverage') {
+            steps {
+                echo "🧪 Exécution des tests avec couverture..."
+                sh '''
+                    cd frontend
+                    npm run test:cov
+                '''
+            }
+        }
+
+        stage('📊 SonarQube Analysis') {
+            steps {
+                echo "📊 Analyse du code avec SonarQube..."
+                withSonarQubeEnv('sonarqube') {
+                    timeout(time: 10, unit: 'MINUTES') {
+                        sh '''
+                            cd frontend
+                            npx sonarqube-scanner \
+                              -X \
+                              -Dsonar.host.url=${SONAR_HOST_URL} \
+                              -Dsonar.projectKey=${PROJECT_NAME}-${SERVICE_NAME} \
+                              -Dsonar.sources=src \
+                              -Dsonar.tests=src \
+                              -Dsonar.inclusions="**/*.ts,**/*.tsx,**/*.js,**/*.jsx,**/*.css" \
+                              -Dsonar.test.inclusions="**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx" \
+                              -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
+                              -Dsonar.typescript.tsconfigPath=tsconfig.sonar.json \
+                              -Dsonar.verbose=true \
+                              -Dsonar.exclusions="**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,dist/**,node_modules/**"
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('🏗️ Build React') {
+            steps {
+                echo "🏗️ Compilation du frontend..."
+                sh 'cd frontend && npm run build'
+            }
+        }
+    }
+
+    post {
+        success { echo "✅ CI Pipeline (Tests & Sonar) réussi !" }
+        failure { echo "❌ CI Pipeline échoué." }
+    }
+}

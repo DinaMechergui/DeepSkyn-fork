@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SkinAnalysis } from '../skinAnalysis/skin-analysis.entity';
 import { SkinMetric } from '../skinMetric/skin-metric.entity';
+import * as crypto from 'crypto';
 
 /* ════════════════════════════════════════════════════════════════════════
  *  INTERFACES — Metrics Aggregation Engine (Dev 1 — Roua)
@@ -13,18 +14,21 @@ import { SkinMetric } from '../skinMetric/skin-metric.entity';
  *  (no SQL aggregation: uses reduce, Map, Math).
  * ════════════════════════════════════════════════════════════════════════ */
 
+type TrendDirection = 'up' | 'down' | 'stable';
+
 export interface DashboardMetrics {
   averageScore: number;
   bestScore: number;
   worstScore: number;
   totalAnalyses: number;
-  trendDirection: 'up' | 'down' | 'stable';
+  trendDirection: TrendDirection;
   trendPercentage: number;
   standardDeviation: number;
   medianScore: number;
   percentile25: number;
   percentile75: number;
   movingAverage5: number;
+  latestAnalysisId?: string;
 }
 
 export interface MonthlyData {
@@ -41,7 +45,7 @@ export interface TrendData {
   period: string;
   current: number;
   previous: number;
-  direction: 'up' | 'down' | 'stable';
+  direction: TrendDirection;
   percentage: number;
   label: string;
   sampleSize: number;
@@ -56,13 +60,17 @@ export class MetricsService {
     private readonly metricRepo: Repository<SkinMetric>,
   ) { }
 
-  async getDashboardMetrics(): Promise<DashboardMetrics> {
-    const analyses = await this.analysisRepo.find({ order: { createdAt: 'DESC' } });
+  async getDashboardMetrics(userId?: string): Promise<DashboardMetrics> {
+    const queryWork: any = { order: { createdAt: 'DESC' }, where: { status: 'COMPLETED' } };
+    if (userId) queryWork.where = { ...queryWork.where, userId };
+    
+    const analyses = await this.analysisRepo.find(queryWork);
     if (analyses.length === 0) {
       return {
         averageScore: 0, bestScore: 0, worstScore: 0, totalAnalyses: 0,
         trendDirection: 'stable', trendPercentage: 0, standardDeviation: 0,
         medianScore: 0, percentile25: 0, percentile75: 0, movingAverage5: 0,
+        latestAnalysisId: undefined,
       };
     }
 
@@ -83,11 +91,15 @@ export class MetricsService {
       percentile25: this.round(this.percentile(scores, 25)),
       percentile75: this.round(this.percentile(scores, 75)),
       movingAverage5: this.round(this.mean(scores.slice(0, 5))),
+      latestAnalysisId: analyses[0]?.id,
     };
   }
 
-  async getTrends(): Promise<TrendData[]> {
-    const allAnalyses = await this.analysisRepo.find({ order: { createdAt: 'DESC' } });
+  async getTrends(userId?: string): Promise<TrendData[]> {
+    const queryWork: any = { order: { createdAt: 'DESC' }, where: { status: 'COMPLETED' } };
+    if (userId) queryWork.where = { ...queryWork.where, userId };
+    
+    const allAnalyses = await this.analysisRepo.find(queryWork);
     if (allAnalyses.length < 2) return [];
 
     return [
@@ -97,8 +109,11 @@ export class MetricsService {
     ];
   }
 
-  async getMonthlyData(months: number = 12): Promise<MonthlyData[]> {
-    const all = await this.analysisRepo.find({ order: { createdAt: 'ASC' } });
+  async getMonthlyData(months: number = 12, userId?: string): Promise<MonthlyData[]> {
+    const queryWork: any = { order: { createdAt: 'ASC' }, where: { status: 'COMPLETED' } };
+    if (userId) queryWork.where = { ...queryWork.where, userId };
+
+    const all = await this.analysisRepo.find(queryWork);
     const monthlyMap = new Map<string, number[]>();
 
     all.forEach(a => {
@@ -205,13 +220,13 @@ export class MetricsService {
       const now = new Date();
       const records: any[] = [];
       for (let monthsAgo = 5; monthsAgo >= 0; monthsAgo--) {
-        const analysesCount = 3 + Math.floor(Math.random() * 3);
+        const analysesCount = 3 + crypto.randomInt(0, 3);
         for (let j = 0; j < analysesCount; j++) {
           const date = new Date(now);
           date.setMonth(date.getMonth() - monthsAgo);
-          date.setDate(1 + Math.floor(Math.random() * 26));
+          date.setDate(1 + crypto.randomInt(0, 26));
           const baseScore = 50 + (5 - monthsAgo) * 7;
-          const variation = (Math.random() - 0.5) * 15;
+          const variation = (crypto.randomInt(0, 100) / 100 - 0.5) * 15;
           const score = Math.max(20, Math.min(96, baseScore + variation));
           records.push({
             userId,

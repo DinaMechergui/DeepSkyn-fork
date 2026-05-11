@@ -69,7 +69,7 @@ export default function AdminUsersPage() {
       setSuccess(`Rôle de ${user.firstName} mis à jour en "${newRole}"`)
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
-      throw err
+      setError(err instanceof Error ? err.message : 'Erreur lors de la modification')
     }
   }
 
@@ -90,7 +90,7 @@ export default function AdminUsersPage() {
         setCurrentPage(currentPage - 1)
       }
     } catch (err) {
-      throw err
+      setError(err instanceof Error ? err.message : 'Erreur lors de la suppression')
     }
   }
 

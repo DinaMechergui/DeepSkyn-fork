@@ -1,0 +1,161 @@
+pipeline {
+    agent {
+        label 'k8s-master'
+    }
+
+    tools {
+        nodejs 'Node18'
+    }
+
+    environment {
+        PROJECT_NAME    = 'deepskyn'
+        SERVICE_NAME    = 'frontend'
+        CONTAINER_NAME  = 'deepskyn-frontend'
+        NETWORK_NAME    = 'deepskyn_network'
+        DOCKER_USER     = 'skanderbensalah1'
+        IMAGE_NAME      = "${DOCKER_USER}/${PROJECT_NAME}-${SERVICE_NAME}"
+        IMAGE_TAG       = "${env.BUILD_NUMBER}"
+        VITE_API_URL    = "http://api.deepskyn.local/api"
+        VITE_GOOGLE_ID  = "203522484031-m9h6cfvjleufa23gir16pujbnctchqch.apps.googleusercontent.com"
+    }
+
+    stages {
+        stage('🔍 Diagnostic Réseau') {
+            steps {
+                echo "--- Vérification du réseau Jenkins ---"
+                sh "cat /etc/hosts"
+                sh "getent hosts github.com || echo 'DNS : github.com inconnu'"
+            }
+        }
+
+        stage('📦 Checkout') {
+            steps {
+                echo "📦 Récupération du code depuis GitHub..."
+                script {
+                    try {
+                        git branch: 'master', url: 'https://github.com/rouabougattaya/DeepSkyn.git'
+                    } catch (Exception e) {
+                        echo "⚠️ Échec DNS, tentative via IP directe..."
+                        sh "git config --global http.sslVerify false"
+                        git branch: 'master', url: 'https://140.82.121.3/rouabougattaya/DeepSkyn.git'
+                    }
+                }
+            }
+        }
+
+        stage('📦 Install Dependencies') {
+            steps {
+                echo "📦 Installation des dépendances Frontend..."
+                sh 'cd frontend && npm install --legacy-peer-deps'
+            }
+        }
+
+        stage('🏗️ Build React') {
+            steps {
+                echo "🏗️ Compilation du frontend..."
+                sh 'cd frontend && npm run build'
+            }
+        }
+
+        stage('🐳 Docker Build & Push') {
+            steps {
+                echo "🐳 Construction et Push de l'image Frontend avec variables..."
+                sh """
+                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -t ${IMAGE_NAME}:latest \
+                    --build-arg VITE_API_BASE_URL=${VITE_API_URL} \
+                    --build-arg VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_ID} \
+                    --build-arg VITE_GOOGLE_REDIRECT_URI=http://localhost/auth/callback/google \
+                    --build-arg VITE_RECAPTCHA_SITE_KEY=6Le2AXUsAAAAAH_UQWtmFFqFsJ33EH8yZEfhzqZS \
+                    -f frontend/Dockerfile.prod frontend/
+                """
+                
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                    sh "echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin"
+                    
+                    retry(3) {
+                        timeout(time: 20, unit: 'MINUTES') {
+                            sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+                        }
+                    }
+                    retry(3) {
+                        timeout(time: 20, unit: 'MINUTES') {
+                            sh "docker push ${IMAGE_NAME}:latest"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('🚀 Deploy DEV') {
+            steps {
+                echo "🚀 Déploiement FRONTEND sur DEV..."
+                sh 'kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -'
+                sh '''
+                    cp -r k8s k8s-dev
+                    sed -i "s|deepskyn-frontend:latest|${IMAGE_NAME}:latest|g" k8s-dev/frontend.yaml
+                    sed -i 's/namespace: deepskyn/namespace: dev/g' k8s-dev/*.yaml
+                    sed -i 's/nodePort: 30080/nodePort: 30080/g' k8s-dev/frontend.yaml
+                    
+                    kubectl apply -f k8s-dev/frontend.yaml
+                    if [ -f k8s-dev/ingress.yaml ]; then
+                        kubectl apply -f k8s-dev/ingress.yaml
+                    fi
+                    
+                    kubectl rollout status deployment/frontend -n dev
+                '''
+            }
+        }
+
+        stage('🚀 Deploy STAGING') {
+            steps {
+                echo "🚀 Déploiement FRONTEND sur STAGING..."
+                sh 'kubectl create namespace staging --dry-run=client -o yaml | kubectl apply -f -'
+                sh '''
+                    cp -r k8s k8s-staging
+                    sed -i "s|deepskyn-frontend:latest|${IMAGE_NAME}:latest|g" k8s-staging/frontend.yaml
+                    sed -i 's/namespace: deepskyn/namespace: staging/g' k8s-staging/*.yaml
+                    sed -i 's/nodePort: 30080/nodePort: 30081/g' k8s-staging/frontend.yaml
+                    
+                    kubectl apply -f k8s-staging/frontend.yaml
+                    if [ -f k8s-staging/ingress.yaml ]; then
+                        kubectl apply -f k8s-staging/ingress.yaml
+                    fi
+                    
+                    kubectl rollout status deployment/frontend -n staging
+                '''
+            }
+        }
+
+        stage('🔥 Deploy PROD') {
+            input {
+                message "⚠️ Déployer le FRONTEND en PRODUCTION ?"
+                ok "Oui, déployer !"
+            }
+            steps {
+                echo "🔥 Déploiement FRONTEND sur PROD..."
+                sh 'kubectl create namespace prod --dry-run=client -o yaml | kubectl apply -f -'
+                sh '''
+                    cp -r k8s k8s-prod
+                    sed -i "s|deepskyn-frontend:latest|${IMAGE_NAME}:latest|g" k8s-prod/frontend.yaml
+                    sed -i 's/namespace: deepskyn/namespace: prod/g' k8s-prod/*.yaml
+                    sed -i 's/nodePort: 30080/nodePort: 30082/g' k8s-prod/frontend.yaml
+                    
+                    kubectl apply -f k8s-prod/frontend.yaml
+                    if [ -f k8s-prod/ingress.yaml ]; then
+                        kubectl apply -f k8s-prod/ingress.yaml
+                    fi
+                    
+                    kubectl rollout status deployment/frontend -n prod
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'rm -rf k8s-dev k8s-staging k8s-prod || true'
+        }
+        success { echo "✅ Déploiement Frontend réussi pour tous les environnements !" }
+        failure { echo "❌ Échec du déploiement Frontend." }
+    }
+}

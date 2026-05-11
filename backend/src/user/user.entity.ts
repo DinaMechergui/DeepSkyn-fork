@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity()
 export class User {
@@ -64,6 +64,9 @@ export class User {
 
   @Column({ type: 'text', nullable: true })
   bio: string | null;
+
+  @Column({ type: 'date', nullable: true })
+  birthDate: Date | null;
 
   // ✅ Face embedding (128 floats) stocké en JSON
   @Column({ type: 'simple-json', nullable: true })

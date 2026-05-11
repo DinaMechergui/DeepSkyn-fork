@@ -1,11 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Like, Repository } from 'typeorm';
 import { Routine } from './routine.entity';
 import { RoutineStep } from '../routineStep/routine-step.entity';
-import { Product } from '../recommendation/product.entity';
+import { Product } from '../products/entities/product.entity';
 import { SkinAnalysis } from '../skinAnalysis/skin-analysis.entity';
 import { RecommendationService } from '../recommendation/recommendation.service';
+import { IncompatibilityService } from './incompatibility.service';
+import { OpenRouterService } from '../ai/openrouter.service';
 
 export type RoutineStepName = 'Cleanser' | 'Serum' | 'Moisturizer';
 
@@ -25,6 +27,7 @@ export interface RoutineStepDto {
 }
 
 export interface RoutineResponseDto {
+  compatibilityWarning?: string;
   morning: { steps: RoutineStepDto[] };
   night: { steps: RoutineStepDto[] };
 }
@@ -47,6 +50,8 @@ function normalizeType(type: unknown): string {
 
 @Injectable()
 export class RoutineService {
+  private readonly logger = new Logger(RoutineService.name);
+
   constructor(
     @InjectRepository(Routine)
     private readonly routineRepository: Repository<Routine>,
@@ -57,166 +62,167 @@ export class RoutineService {
     @InjectRepository(SkinAnalysis)
     private readonly skinAnalysisRepository: Repository<SkinAnalysis>,
     private readonly recommendationService: RecommendationService,
-  ) {}
+    private readonly incompatibilityService: IncompatibilityService,
+    private readonly openRouterService: OpenRouterService,
+  ) { }
 
   async getOrGenerateRoutine(userId: string): Promise<RoutineResponseDto> {
-    // Récupérer la dernière analyse complétée pour adapter le builder
-    const lastAnalysis = await this.skinAnalysisRepository.findOne({
+    const lastAnalysis = await this.getLastAnalysis(userId);
+    const skinType = inferSkinTypeFromAnalysis(lastAnalysis);
+    const recommendations = await this.gatherRecommendations(userId, lastAnalysis, skinType);
+
+    const aiRoutine = await this.generateAIRoutine(recommendations, lastAnalysis, skinType);
+    const [amRoutine, pmRoutine] = await this.initializeRoutines(userId);
+
+    await this.processRoutineSteps(amRoutine.id, 'AM', aiRoutine, recommendations, skinType);
+    await this.processRoutineSteps(pmRoutine.id, 'PM', aiRoutine, recommendations, skinType);
+
+    return this.buildRoutineResponse(amRoutine.id, pmRoutine.id);
+  }
+
+  private async getLastAnalysis(userId: string) {
+    return this.skinAnalysisRepository.findOne({
       where: { userId, status: 'COMPLETED' },
       order: { createdAt: 'DESC' },
     });
+  }
 
-    const skinType = inferSkinTypeFromAnalysis(lastAnalysis);
-    const skinTypeLower = skinType === 'Normal' ? null : skinType.toLowerCase();
+  private async gatherRecommendations(userId: string, lastAnalysis: SkinAnalysis | null, skinType: string) {
+    let recommendations: any[] = [];
+    if (lastAnalysis) {
+      recommendations = await this.recommendationService.getRecommendationsForAnalysis(lastAnalysis.id);
+    }
 
-    // Générer des recommandations à partir du skinType inféré
-    const recommendations = await this.recommendationService.getRecommendationsForSkinState(
-      userId,
-      'routine_temp',
-      skinType,
-    );
+    if (!recommendations?.length) {
+      recommendations = await this.recommendationService.getLatestFinalRecommendationsForUser(userId);
+    }
 
-    // Persist routines
-    // Note: on régénère à chaque appel pour rester cohérent avec l'analyse la plus récente.
-    const routines = await Promise.all(
-      (['AM', 'PM'] as const).map(async (type) => {
-        const routine = this.routineRepository.create({
-          userId,
-          type,
-          generatedByAI: true,
-        });
-        return this.routineRepository.save(routine);
-      }),
-    );
-
-    const [amRoutine, pmRoutine] = routines;
-
-    const buildStepsForType = (type: 'AM' | 'PM') => {
-      const pickNth = (items: any[], n: number) => {
-        if (items.length === 0) return null;
-        const idx = Math.min(n, items.length - 1);
-        return items[idx];
-      };
-
-      const cleaners = (recommendations || []).filter((p: any) => {
-        const t = normalizeType(p?.type).toLowerCase();
-        return t.includes('cleanser');
-      });
-      const serums = (recommendations || []).filter((p: any) => {
-        const t = normalizeType(p?.type).toLowerCase();
-        return t.includes('serum');
-      });
-      const moisturizers = (recommendations || []).filter((p: any) => {
-        const t = normalizeType(p?.type).toLowerCase();
-        return t.includes('moisturiser') || t.includes('moisturizer');
-      });
-
-      // AM: 1er de chaque catégorie; PM: 2ème si dispo
-      const cleanserRec = type === 'AM' ? pickNth(cleaners, 0) : pickNth(cleaners, 1);
-      const serumRec = type === 'AM' ? pickNth(serums, 0) : pickNth(serums, 1);
-      const moisturizerRec = type === 'AM' ? pickNth(moisturizers, 0) : pickNth(moisturizers, 1);
-
-      return [
-        { stepOrder: 1, stepName: 'Cleanser' as const, rec: cleanserRec },
-        { stepOrder: 2, stepName: 'Serum' as const, rec: serumRec },
-        { stepOrder: 3, stepName: 'Moisturizer' as const, rec: moisturizerRec },
-      ];
-    };
-
-    const amSteps = buildStepsForType('AM');
-    const pmSteps = buildStepsForType('PM');
-
-    const resolveProduct = async (rec: any): Promise<Product | null> => {
-      if (!rec) return null;
-
-      const normalizeUrl = (u: unknown): string | null => {
-        if (typeof u !== 'string') return null;
-        const trimmed = u.trim();
-        if (!trimmed || trimmed === '#') return null;
-        if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
-        if (trimmed.startsWith('//')) return `https:${trimmed}`;
-        return `https://${trimmed}`;
-      };
-
-      const normalizedRecUrl = normalizeUrl(rec?.url);
-
-      // Cas "python output": pas d'id, seulement (name/type/price/url/skinType)
-      if (rec.id) {
-        const byId = await this.productRepository.findOne({ where: { id: rec.id } });
-        if (byId) {
-          // Si le produit en DB n'a pas (ou plus) d'URL valide, on la récupère depuis la recommandation.
-          if (normalizedRecUrl) {
-            const current = typeof byId.url === 'string' ? byId.url.trim() : '';
-            if (!current || current === '#' || !current.startsWith('http')) {
-              byId.url = normalizedRecUrl;
-              await this.productRepository.save(byId);
-            }
-          }
-          return byId;
-        }
-      }
-
-      const name = normalizeType(rec.name);
-      if (!name) return null;
-
-      const byName = await this.productRepository.findOne({ where: { name } });
-      if (byName && normalizedRecUrl) {
-        const current = typeof byName.url === 'string' ? byName.url.trim() : '';
-        if (!current || current === '#' || !current.startsWith('http')) {
-          byName.url = normalizedRecUrl;
-          await this.productRepository.save(byName);
-        }
-      }
-
-      return byName;
-    };
-
-    const findFallbackProduct = async (stepName: RoutineStepName): Promise<Product | null> => {
-      const typeKeyword = stepName === 'Moisturizer' ? 'Moistur' : stepName;
-
-      const bySkin = skinTypeLower
-        ? await this.productRepository.findOne({
-            where: { skinType: skinTypeLower, type: Like(`%${typeKeyword}%`) },
-          })
-        : null;
-
-      if (bySkin) return bySkin;
-
-      return this.productRepository.findOne({
-        where: { type: Like(`%${typeKeyword}%`) },
-      });
-    };
-
-    const buildAndSaveSteps = async (routineId: string, steps: any[]) => {
-      const resolved = await Promise.all(
-        steps.map(async (s) => {
-          const productFromRec = await resolveProduct(s.rec);
-          const product = productFromRec ?? (await findFallbackProduct(s.stepName as RoutineStepName));
-          if (!product) return null; // still possible if DB is empty/unseeded
-          const step = this.routineStepRepository.create({
-            routineId,
-            productId: product.id,
-            stepOrder: s.stepOrder,
-            notes: s.stepName,
-          });
-          return step;
-        }),
+    if (!recommendations?.length) {
+      recommendations = await this.recommendationService.getRecommendationsForSkinState(
+        userId,
+        lastAnalysis?.id || 'routine_temp',
+        skinType
       );
+    }
+    return recommendations;
+  }
 
-      const toSave = resolved.filter(Boolean) as RoutineStep[];
-      await this.routineStepRepository.save(toSave);
+  private async generateAIRoutine(recommendations: any[], lastAnalysis: SkinAnalysis | null, skinType: string) {
+    if (!recommendations.length) return null;
+    try {
+      return await this.openRouterService.generateRoutineFromRecommendations({
+        recommendations,
+        analysisResult: {
+          skinType,
+          hydration: lastAnalysis?.hydration ?? null,
+          acne: lastAnalysis?.acne ?? null,
+          wrinkles: lastAnalysis?.wrinkles ?? null,
+          oil: lastAnalysis?.oil ?? null,
+          skinScore: lastAnalysis?.skinScore ?? null,
+          skinAge: lastAnalysis?.skinAge ?? null,
+        },
+      });
+    } catch (err: any) {
+      this.logger.error(`Erreur lors de la génération de la routine par l'IA: ${err.message}`);
+      return null;
+    }
+  }
 
-      return toSave;
-    };
+  private async initializeRoutines(userId: string) {
+    return Promise.all(['AM', 'PM'].map(async (type) => {
+      const routine = this.routineRepository.create({ userId, type: type as any, generatedByAI: true });
+      return this.routineRepository.save(routine);
+    }));
+  }
 
-    await buildAndSaveSteps(amRoutine.id, amSteps);
-    await buildAndSaveSteps(pmRoutine.id, pmSteps);
+  private async processRoutineSteps(routineId: string, type: 'AM' | 'PM', aiRoutine: any, recommendations: any[], skinType: string) {
+    const steps = this.buildSteps(type, aiRoutine, recommendations, skinType);
+    const allowFallback = !recommendations.length;
 
-    // Recharger en DTO triés par stepOrder
-    const amDto = await this.buildRoutineDto(amRoutine.id);
-    const pmDto = await this.buildRoutineDto(pmRoutine.id);
+    const resolved = await Promise.all(steps.map(async (s) => {
+      const product = (await this.resolveProduct(s.rec)) || (allowFallback ? await this.findFallbackProduct(s.stepName, skinType) : null);
+      return product ? this.routineStepRepository.create({
+        routineId,
+        productId: product.id,
+        stepOrder: s.stepOrder,
+        notes: s.notes || s.stepName,
+      }) : null;
+    }));
+
+    await this.routineStepRepository.save(resolved.filter((s): s is RoutineStep => !!s));
+  }
+
+  private buildSteps(type: 'AM' | 'PM', aiRoutine: any, recommendations: any[], skinType: string) {
+    const fromAi = type === 'AM' ? aiRoutine?.morning : aiRoutine?.night;
+    if (Array.isArray(fromAi) && fromAi.length > 0) {
+      return fromAi.map((step: any, index: number) => ({
+        stepOrder: index + 1,
+        stepName: (step?.stepName || 'Serum') as RoutineStepName,
+        rec: recommendations.find((r: any) => r?.name === step?.productName),
+        notes: [step?.instruction, step?.reason].filter(Boolean).join(' '),
+      })).filter(s => s.rec);
+    }
+
+    return this.buildDefaultSteps(type, recommendations);
+  }
+
+  private buildDefaultSteps(type: 'AM' | 'PM', recommendations: any[]) {
+    const filter = (cat: string) => recommendations.filter(p => normalizeType(p?.type).toLowerCase().includes(cat));
+    const cleaners = filter('cleanser');
+    const serums = filter('serum');
+    const moisturizers = filter('moisturiz');
+
+    const pick = (items: any[], n: number) => items[Math.min(n, items.length - 1)] || null;
+    const offset = type === 'AM' ? 0 : 1;
+
+    return [
+      { stepOrder: 1, stepName: 'Cleanser' as const, rec: pick(cleaners, offset), notes: 'Nettoyer la peau.' },
+      { stepOrder: 2, stepName: 'Serum' as const, rec: pick(serums, offset), notes: 'Appliquer avant la creme.' },
+      { stepOrder: 3, stepName: 'Moisturizer' as const, rec: pick(moisturizers, offset), notes: 'Sceller l hydratation.' },
+    ];
+  }
+
+  private async resolveProduct(rec: any): Promise<Product | null> {
+    if (!rec) return null;
+    const name = normalizeType(rec.name);
+    const url = this.normalizeUrl(rec.url);
+
+    let product = rec.id ? await this.productRepository.findOne({ where: { id: rec.id } }) : null;
+    if (!product && name) product = await this.productRepository.findOne({ where: { name } });
+
+    if (product && url && (!product.url || product.url === '#' || !product.url.startsWith('http'))) {
+      product.url = url;
+      await this.productRepository.save(product);
+    }
+    return product;
+  }
+
+  private normalizeUrl(u: unknown): string | null {
+    if (typeof u !== 'string' || !u.trim() || u.trim() === '#') return null;
+    const trimmed = u.trim();
+    if (trimmed.startsWith('http')) return trimmed;
+    return `https://${trimmed.replace(/^\/\//, '')}`;
+  }
+
+  private async findFallbackProduct(stepName: RoutineStepName, skinType: string): Promise<Product | null> {
+    const typeKeyword = stepName === 'Moisturizer' ? 'Moistur' : stepName;
+    const skinTypeLower = skinType.toLowerCase();
+    
+    let product = await this.productRepository.findOne({ where: { skinType: skinTypeLower, type: Like(`%${typeKeyword}%`) } });
+    if (!product) product = await this.productRepository.findOne({ where: { type: Like(`%${typeKeyword}%`) } });
+    return product;
+  }
+
+  private async buildRoutineResponse(amId: string, pmId: string): Promise<RoutineResponseDto> {
+    const amDto = await this.buildRoutineDto(amId);
+    const pmDto = await this.buildRoutineDto(pmId);
+    const productIds = [...amDto, ...pmDto].map(s => s.product.id);
+    
+    const allProducts = productIds.length ? await this.productRepository.find({ where: { id: In(productIds) } }) : [];
+    const checkResult = this.incompatibilityService.checkRoutine(allProducts);
 
     return {
+      compatibilityWarning: checkResult.message,
       morning: { steps: amDto },
       night: { steps: pmDto },
     };

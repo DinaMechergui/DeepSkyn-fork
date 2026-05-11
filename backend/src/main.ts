@@ -83,6 +83,9 @@ async function bootstrap() {
     '/api/ai/weights/validate',
     '/api/ai/test-cases',
     '/api/ai/debug',
+     '/api/ai/skin-risk',      // ✅ ajouté
+    '/api/ai/skin-alerts',    // ✅ ajouté
+    '/api/ai/recommendations',
   ];
 
   // ✅ FIX PRINCIPAL : sameSite 'none' en production pour le cross-origin

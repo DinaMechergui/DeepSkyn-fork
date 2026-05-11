@@ -19,9 +19,19 @@ import { SkinMetricModule } from './skinMetric/skin-metric.module';
 import { AdminModule } from './admin/admin.module';
 import { RecommendationModule } from './recommendation/recommendation.module';
 import { RoutineModule } from './routine/routine.module';
+import { ProductsModule } from './products/products.module';
+import { ChatModule } from './chat/chat.module';
+import { SubscriptionModule } from './subscription/subscription.module';
+import { PaymentModule } from './payment/payment.module';
+import { PlansModule } from './plans/plans.module';
+import { DigitalTwinModule } from './digitalTwin/digital-twin.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
+    NotificationsModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
@@ -37,9 +47,9 @@ import { RoutineModule } from './routine/routine.module';
         : {
           host: process.env.DB_HOST || 'localhost',
           port: parseInt(process.env.DB_PORT || '5432', 10),
-          username: process.env.DB_USER || process.env.DB_USERNAME || 'postgres',
-          password: process.env.DB_PASSWORD || 'asia2015',
-          database: process.env.DB_NAME || process.env.DB_DATABASE || 'deepskyn_db',
+          username: process.env.DB_USER || process.env.DB_USERNAME,
+          password: process.env.DB_PASSWORD,
+          database: process.env.DB_NAME || process.env.DB_DATABASE,
         }),
       entities: [join(__dirname, '**', '*.entity.{ts,js}')],
       synchronize: process.env.NODE_ENV !== 'production',
@@ -55,6 +65,12 @@ import { RoutineModule } from './routine/routine.module';
     AdminModule,
     RecommendationModule,
     RoutineModule,
+    ProductsModule,
+    ChatModule,
+    SubscriptionModule,
+    PaymentModule,
+    PlansModule,
+    DigitalTwinModule,
   ],
   controllers: [AppController, AnalysisController],
   providers: [

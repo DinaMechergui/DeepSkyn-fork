@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { getUser, authFetch } from '@/lib/authSession';
 import {
     ArrowLeft,
     Sparkles,
@@ -23,8 +24,20 @@ function ScoreRing({ score, size = 160 }: { score: number; size?: number }) {
     const r = 45;
     const circumference = 2 * Math.PI * r;
     const filled = ((100 - score) / 100) * circumference;
-    const color = score >= 75 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
-    const label = score >= 75 ? 'Excellent' : score >= 50 ? 'Medium' : 'Needs Care';
+    const getScoreColor = (s: number) => {
+        if (s >= 75) return '#10b981';
+        if (s >= 50) return '#f59e0b';
+        return '#ef4444';
+    };
+
+    const getScoreLabel = (s: number) => {
+        if (s >= 75) return 'Excellent';
+        if (s >= 50) return 'Medium';
+        return 'Needs Care';
+    };
+
+    const color = getScoreColor(score);
+    const label = getScoreLabel(score);
 
     return (
         <div className="relative" style={{ width: size, height: size }}>
@@ -49,8 +62,20 @@ function ScoreRing({ score, size = 160 }: { score: number; size?: number }) {
 }
 
 function MetricBar({ label, value }: { label: string; value: number }) {
-    const color = value >= 75 ? 'bg-teal-500' : value >= 50 ? 'bg-amber-500' : 'bg-rose-500';
-    const bgColor = value >= 75 ? 'bg-teal-50' : value >= 50 ? 'bg-amber-50' : 'bg-rose-50';
+    const getBarColor = (v: number) => {
+        if (v >= 75) return 'bg-teal-500';
+        if (v >= 50) return 'bg-amber-500';
+        return 'bg-rose-500';
+    };
+
+    const getBarBgColor = (v: number) => {
+        if (v >= 75) return 'bg-teal-50';
+        if (v >= 50) return 'bg-amber-50';
+        return 'bg-rose-50';
+    };
+
+    const color = getBarColor(value);
+    const bgColor = getBarBgColor(value);
 
     return (
         <div className={`p-4 rounded-2xl border border-slate-100 ${bgColor}/30`}>
@@ -75,10 +100,28 @@ export default function SkinAnalysisDetailPage() {
     const [analysis, setAnalysis] = useState<ComparedAnalysisItem | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [currentPlan, setCurrentPlan] = useState<string>('FREE');
     const navigate = useNavigate();
+
+    const isPro = currentPlan?.toUpperCase() === 'PRO' || currentPlan?.toUpperCase() === 'PREMIUM';
 
     useEffect(() => {
         if (!id) return;
+
+        const loadUserPlan = async () => {
+            try {
+                const currentUser = getUser();
+                if (currentUser) {
+                    const res = await authFetch(`/subscription/${currentUser.id}`);
+                    if (res.ok) {
+                        const subData = await res.json();
+                        setCurrentPlan(subData?.plan || 'FREE');
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load plan:', err);
+            }
+        };
 
         const fetchAnalysis = async () => {
             try {
@@ -92,6 +135,7 @@ export default function SkinAnalysisDetailPage() {
             }
         };
 
+        loadUserPlan();
         fetchAnalysis();
     }, [id]);
 
@@ -196,6 +240,24 @@ export default function SkinAnalysisDetailPage() {
                                     </p>
                                 </div>
                             </div>
+
+                            {/* Digital Twin Button */}
+                            <button
+                                onClick={() => {
+                                    if (isPro) {
+                                        navigate(`/analysis/digital-twin/${analysis.id}`);
+                                    } else {
+                                        navigate('/upgrade');
+                                    }
+                                }}
+                                className={`w-full font-bold py-4 px-6 rounded-3xl shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2 ${isPro
+                                    ? 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-purple-500/30'
+                                    : 'bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white shadow-pink-500/30'
+                                    }`}
+                            >
+                                <Sparkles className="w-5 h-5" />
+                                {isPro ? 'Explore Your Digital Twin (Future Skin)' : 'Upgrade to PRO for Digital Twin'}
+                            </button>
                         </div>
                     </div>
                 </div>

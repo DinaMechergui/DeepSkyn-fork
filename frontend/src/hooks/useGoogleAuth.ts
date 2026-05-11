@@ -116,10 +116,17 @@ export const signInWithGoogleRedirect = (): void => {
     console.error('VITE_GOOGLE_CLIENT_ID is not set');
     throw new Error('Google sign-in is not configured (missing client ID)');
   }
-  const redirectUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI || 'http://localhost:5173/auth/callback/google';
+  const redirectUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/callback/google`;
   
   // Generate a cryptographically random nonce for id_token verification
-  const nonce = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  let nonce = '';
+  if (crypto.randomUUID) {
+    nonce = crypto.randomUUID();
+  } else {
+    const array = new Uint32Array(2);
+    window.crypto.getRandomValues(array);
+    nonce = array[0].toString(36) + array[1].toString(36);
+  }
   
   // Store nonce in session storage for id_token verification on callback
   sessionStorage.setItem('google_oauth_nonce', nonce);

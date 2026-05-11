@@ -13,7 +13,11 @@ import {
   AlertCircle,
   CheckCircle,
   Info,
+  Lock,
+  Crown,
 } from 'lucide-react';
+import { apiGet } from '../services/apiClient';
+import { getUser } from '../lib/authSession';
 import { comparisonService } from '../services/comparison.service';
 import type {
   CompareAnalysisResult,
@@ -61,13 +65,14 @@ function TrendBadge({ trend }: { trend: 'improvement' | 'regression' | 'stable' 
 }
 
 function ScoreBadge({ score }: { score: number }) {
-  let badgeClass = 'score-badge ';
-  if (score >= 70) badgeClass += 'score-high';
-  else if (score >= 50) badgeClass += 'score-medium';
-  else badgeClass += 'score-low';
+  const getBadgeClass = (s: number) => {
+    if (s >= 70) return 'score-badge score-high';
+    if (s >= 50) return 'score-badge score-medium';
+    return 'score-badge score-low';
+  };
 
   return (
-    <span className={badgeClass}>
+    <span className={getBadgeClass(score)}>
       Score {score}
     </span>
   );
@@ -87,8 +92,12 @@ function AnalysisCard({
   metrics?: { hydration: number; oil: number; acne: number; wrinkles: number } | null;
 }) {
   const metrics = metricsProp ?? DEFAULT_METRICS;
-  const scoreColor =
-    skinScore >= 70 ? 'score-value-high' : skinScore >= 50 ? 'score-value-medium' : 'score-value-low';
+  const getScoreClass = (score: number) => {
+    if (score >= 70) return 'score-value-high';
+    if (score >= 50) return 'score-value-medium';
+    return 'score-value-low';
+  };
+  const scoreColor = getScoreClass(skinScore);
   const date = new Date(createdAt).toLocaleDateString('en-US', {
     day: 'numeric',
     month: 'long',
@@ -148,6 +157,10 @@ export default function ComparisonPage() {
   const [compareLoading, setCompareLoading] = useState(false);
   const [compareError, setCompareError] = useState<string | null>(null);
   const [result, setResult] = useState<CompareAnalysisResult | null>(null);
+  const [currentPlan, setCurrentPlan] = useState<string>('FREE');
+
+  const user = getUser();
+  const userId = user?.id;
 
   const hasUrlIds = Boolean(firstIdFromUrl && secondIdFromUrl);
 
@@ -168,6 +181,14 @@ export default function ComparisonPage() {
         if (!cancelled) setAnalysesLoading(false);
       }
     })();
+
+    // Fetch current plan
+    if (userId) {
+      apiGet<any>(`/subscription/${userId}`).then(subData => {
+        setCurrentPlan(subData.plan || 'FREE');
+      }).catch(() => setCurrentPlan('FREE'));
+    }
+
     return () => {
       cancelled = true;
     };
@@ -209,13 +230,61 @@ export default function ComparisonPage() {
   const bothSelected = Boolean(firstId && secondId && firstId !== secondId);
   const canCompare = bothSelected && !compareLoading;
 
-  const handleCompare = (e: React.FormEvent) => {
+  const handleCompare = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!canCompare) return;
     setCompareError(null);
     navigate(`/analysis/compare?firstId=${encodeURIComponent(firstId)}&secondId=${encodeURIComponent(secondId)}`, {
       replace: true,
     });
+  };
+
+  /**
+   * Génère un paragraphe explicatif dynamique en français basé sur les résultats.
+   */
+  const getHydrationText = (hydration: any): string | null => {
+    if (!hydration) return null;
+    const deltaStr = Math.abs(hydration.delta).toFixed(1);
+    if (hydration.trend === 'improvement') {
+      return `Votre hydratation a augmenté de ${deltaStr} points, ce qui est excellent pour la barrière cutanée !`;
+    }
+    if (hydration.trend === 'regression') {
+      return `Votre hydratation a baissé de ${deltaStr} points, ce qui peut fragiliser votre peau.`;
+    }
+    return null;
+  };
+
+  const getAcneWrinklesText = (acne: any, wrinkles: any): string[] => {
+    const texts: string[] = [];
+    if (acne?.trend === 'improvement') texts.push('Votre acné montre des signes de diminution, bravo !');
+    else if (acne?.trend === 'regression') texts.push("On observe une petite poussée d'acné, restez régulier sur le nettoyage.");
+
+    if (wrinkles?.trend === 'regression') texts.push('En revanche, vos rides ont légèrement augmenté.');
+    else if (wrinkles?.trend === 'improvement') texts.push('Vos rides se sont estompées, continuez vos soins anti-âge.');
+    return texts;
+  };
+
+  const getGlobalAdvice = (trend: string): string => {
+    if (trend === 'improvement') return 'Votre peau est sur la bonne voie, restez constant dans vos efforts !';
+    if (trend === 'regression') return 'Votre peau a besoin de plus de soin en ce moment, pensez à ajuster votre routine.';
+    return 'Votre peau est stable, continuez ainsi pour maintenir ces résultats.';
+  };
+
+  const getExplanatoryText = () => {
+    if (!result || !result.differences) return null;
+
+    const { globalTrend, differences } = result;
+    const hydration = differences.find((d) => d.metric === 'hydration');
+    const acne = differences.find((d) => d.metric === 'acne');
+    const wrinkles = differences.find((d) => d.metric === 'wrinkles');
+
+    const sections: (string | null)[] = [
+      getHydrationText(hydration),
+      ...getAcneWrinklesText(acne, wrinkles),
+      getGlobalAdvice(globalTrend)
+    ];
+
+    return sections.filter(Boolean).join(' ');
   };
 
   return (
@@ -653,7 +722,63 @@ export default function ComparisonPage() {
         }
       `}</style>
 
-      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', position: 'relative' }}>
+
+        {/* LOCK OVERLAY FOR FREE USERS */}
+        {currentPlan === 'FREE' && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(255, 255, 255, 0.7)',
+            backdropFilter: 'blur(10px)',
+            zIndex: 100,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 40,
+            textAlign: 'center'
+          }}>
+            <div style={{
+              width: 80, height: 80, borderRadius: 24,
+              background: 'white', display: 'grid', placeItems: 'center',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.1)', marginBottom: 24,
+              color: '#0d9488'
+            }}>
+              <Lock size={40} />
+            </div>
+            <h1 style={{ fontSize: 32, fontWeight: 900, color: '#0f172a', marginBottom: 16 }}>
+              Comparaison d'Analyses <span style={{ color: '#0d9488' }}>PRO</span>
+            </h1>
+            <p style={{ fontSize: 18, color: '#64748b', maxWidth: 500, lineHeight: 1.6, marginBottom: 32 }}>
+              La comparaison détaillée entre deux analyses et le calcul des tendances
+              sont réservés aux membres PRO. Suivez vos résultats précisément !
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="px-8 py-4 rounded-2xl font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all font-sans"
+              >
+                Retour
+              </button>
+              <button
+                onClick={() => navigate('/upgrade')}
+                style={{
+                  background: 'linear-gradient(135deg, #0d9488, #10b981)',
+                  color: 'white', padding: '16px 40px', borderRadius: 20,
+                  fontWeight: 800, border: 'none', cursor: 'pointer',
+                  boxShadow: '0 10px 20px rgba(13, 148, 136, 0.2)',
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  transition: 'all 0.3s',
+                  fontFamily: 'Inter, sans-serif'
+                }}
+              >
+                <Crown size={20} /> Débloquer maintenant
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ── En-tête ── */}
         <div style={{
           display: 'flex',
@@ -671,7 +796,7 @@ export default function ComparisonPage() {
             {result && (
               <div className="stats-pill">
                 <div className="pulse-dot" />
-                {result.summaryText.split(' ').slice(0, 3).join(' ')}...
+                {result.summaryText?.split(' ')?.slice(0, 3)?.join(' ')}...
               </div>
             )}
           </div>
@@ -907,6 +1032,17 @@ export default function ComparisonPage() {
               <p className="summary-text">
                 {result.summaryText ?? 'Comparison completed.'}
               </p>
+
+              {/* Paragraphe explicatif dynamique */}
+              <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-start gap-3 fade-in">
+                <span className="text-xl" role="img" aria-label="light-bulb">
+                  💡
+                </span>
+                <p className="text-slate-700 text-sm leading-relaxed">
+                  <strong className="text-slate-900">À retenir :</strong>{' '}
+                  {getExplanatoryText()}
+                </p>
+              </div>
               <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
                 <CheckCircle size={16} style={{ color: '#10b981', marginRight: 6 }} />
                 <span style={{ fontSize: 12, color: '#64748b' }}>

@@ -7,12 +7,14 @@ import {
   Get,
   Put,
   Req,
-  Res,  Delete,
+  Res,
+  Delete,
   UseGuards,
   UnauthorizedException,
   InternalServerErrorException,
   Param,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
@@ -39,7 +41,7 @@ import { RecaptchaService } from './services/recaptcha.service'; // ← IMPORT A
 
 function getSessionMetadata(req: Request): { ipAddress: string | null; userAgent: string | null } {
   const ip = req.ip ?? req.socket?.remoteAddress ?? null;
-  const userAgent = (req.headers['user-agent'] as string) ?? null;
+  const userAgent = (req.headers['user-agent']) ?? null;
   return { ipAddress: ip, userAgent };
 }
 
@@ -202,7 +204,15 @@ export class AuthController {
 
       return res.json(result);
     } catch (error) {
-      throw new InternalServerErrorException(error.message);
+      console.error('[GoogleAuth] Backend error:', error.message, error.stack);
+      
+      if (error instanceof UnauthorizedException || error instanceof BadRequestException || error instanceof ConflictException) {
+        throw error;
+      }
+      
+      throw new InternalServerErrorException(
+        error.message || 'Une erreur est survenue lors de l\'authentification Google'
+      );
     }
   }
 
@@ -417,7 +427,6 @@ export class AuthController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<any> {
-    const metadata = getSessionMetadata(req);
     const tempId = body.tempId || '';
     const result = await this.authService.verifyAdminBiometricLogin(body.credential, tempId);
 

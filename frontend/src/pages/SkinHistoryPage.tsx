@@ -9,8 +9,11 @@ import {
     Activity,
     Search,
     BarChart3,
-    Maximize2
+    Maximize2,
+    Lock,
+    Crown
 } from 'lucide-react';
+import { apiGet } from '@/services/apiClient';
 import { comparisonService } from '@/services/comparison.service';
 import TimelineView from '@/components/insights/TimelineView';
 import HistoryTimelineModal from '@/components/insights/HistoryTimelineModal';
@@ -24,6 +27,7 @@ export default function SkinHistoryPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [timelineData, setTimelineData] = useState<{ date: string; score: number }[]>([]);
     const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
+    const [currentPlan, setCurrentPlan] = useState<string>('FREE');
 
     // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
@@ -34,38 +38,55 @@ export default function SkinHistoryPage() {
     const user = getUser();
     const userId = user?.id;
 
+    const loadHistory = async (isMounted: boolean) => {
+        setError(null);
+        const response = await comparisonService.getUserAnalyses(currentPage, pageSize);
+        if (!isMounted) return;
+
+        setAnalyses(response.data);
+        setTotalItems(response.total);
+
+        const history = response.data.map((a: any) => ({
+            date: new Date(a.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+            score: a.skinScore
+        })).reverse();
+        setTimelineData(history);
+        setLoading(false);
+    }
+
+    const loadPlan = async () => {
+        try {
+            const subData = await apiGet<any>(`/subscription/${userId}`);
+            setCurrentPlan(subData.plan || 'FREE');
+        } catch (e) {
+            setCurrentPlan('FREE');
+        }
+    }
+
+    const handleFetchError = (err: any, isMounted: boolean) => {
+        if (!isMounted) return;
+        console.error('Error fetching history:', err);
+        if (err.message?.includes('401') || err.status === 401) {
+            navigate('/auth/login');
+            return;
+        }
+        setError('Unable to load your history. Please try again.');
+        setLoading(false);
+    }
+
     useEffect(() => {
         let isMounted = true;
         const fetchData = async () => {
+            if (!userId) {
+                navigate('/auth/login');
+                return;
+            }
+
             try {
-                if (!userId) {
-                    navigate('/auth/login');
-                    return;
-                }
-
-                setError(null);
-                const response = await comparisonService.getUserAnalyses(currentPage, pageSize);
-
-                if (!isMounted) return;
-
-                setAnalyses(response.data);
-                setTotalItems(response.total);
-
-                const history = response.data.map((a: any) => ({
-                    date: new Date(a.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
-                    score: a.skinScore
-                })).reverse();
-                setTimelineData(history);
-                setLoading(false);
+                await loadHistory(isMounted);
+                await loadPlan();
             } catch (err: any) {
-                if (!isMounted) return;
-                console.error('Error fetching history:', err);
-                if (err.message?.includes('401') || err.status === 401) {
-                    navigate('/auth/login');
-                    return;
-                }
-                setError('Unable to load your history. Please try again.');
-                setLoading(false);
+                handleFetchError(err, isMounted);
             }
         };
         fetchData();
@@ -81,6 +102,79 @@ export default function SkinHistoryPage() {
         );
     }, [analyses, searchTerm]);
 
+    const getScoreBadgeClass = (score: number) => {
+        if (score >= 75) return 'bg-teal-50 text-teal-600 border border-teal-100';
+        if (score >= 50) return 'bg-amber-50 text-amber-600 border border-amber-100';
+        return 'bg-rose-50 text-rose-600 border border-rose-100';
+    };
+
+    const renderHistoryContent = () => {
+        if (error) {
+            return (
+                <div className="bg-white p-12 rounded-3xl border border-rose-100 text-center">
+                    <Activity className="w-12 h-12 text-rose-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-bold text-slate-900">{error}</h3>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="mt-6 inline-flex items-center gap-2 px-6 py-2 bg-[#0d9488] text-white rounded-full font-bold hover:bg-[#0a7a70] transition-all"
+                    >
+                        Try Again
+                    </button>
+                </div>
+            );
+        }
+
+        if (filteredAnalyses.length > 0) {
+            return filteredAnalyses.map((analysis) => (
+                <div key={analysis.id} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all group">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold ${getScoreBadgeClass(analysis.skinScore)}`}>
+                                {analysis.skinScore}
+                            </div>
+                            <div>
+                                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Analysis Date</p>
+                                <p className="font-bold text-slate-900">
+                                    {new Date(analysis.createdAt).toLocaleDateString('en-US', {
+                                        day: 'numeric',
+                                        month: 'long',
+                                        year: 'numeric'
+                                    })}
+                                </p>
+                                <div className="text-xs text-slate-500 flex items-center gap-1">
+                                    <Activity className="w-3 h-3" />
+                                    {analysis.summary || 'General health check'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <Link
+                            to={`/analysis/details/${analysis.id}`}
+                            className="flex items-center gap-2 text-sm font-bold text-[#0d9488] hover:gap-3 transition-all"
+                        >
+                            View Details
+                            <ChevronRight className="w-4 h-4" />
+                        </Link>
+                    </div>
+                </div>
+            ));
+        }
+
+        return (
+            <div className="bg-white p-12 rounded-3xl border border-dashed border-slate-300 text-center">
+                <History className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Analysis History</h2>
+                <p className="text-slate-500 text-sm font-medium">Track your skincare journey over time</p>
+                <Link
+                    to="/analysis"
+                    className="inline-flex items-center gap-2 px-6 py-2 bg-[#0d9488] text-white rounded-full font-bold hover:bg-[#0a7a70] transition-all"
+                >
+                    Analyze Skin Now
+                </Link>
+            </div>
+        );
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -92,6 +186,61 @@ export default function SkinHistoryPage() {
     return (
         <div className="min-h-screen bg-slate-50 font-sans">
             <Navbar />
+            
+            {/* LOCK OVERLAY FOR FREE USERS */}
+            {currentPlan === 'FREE' && (
+                <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    background: 'rgba(255, 255, 255, 0.6)',
+                    backdropFilter: 'blur(12px)',
+                    zIndex: 100,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 40,
+                    textAlign: 'center'
+                }}>
+                    <div style={{
+                        width: 80, height: 80, borderRadius: 24,
+                        background: 'white', display: 'grid', placeItems: 'center',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.1)', marginBottom: 24,
+                        color: '#0d9488'
+                    }}>
+                        <Lock size={40} />
+                    </div>
+                    <h1 style={{ fontSize: 32, fontWeight: 900, color: '#0f172a', marginBottom: 16 }}>
+                        Historique Complet <span style={{ color: '#0d9488' }}>PRO</span>
+                    </h1>
+                    <p style={{ fontSize: 18, color: '#64748b', maxWidth: 500, lineHeight: 1.6, marginBottom: 32 }}>
+                        L'accès à l'historique illimité et au suivi de progression est réservé aux membres PRO. 
+                        Passez au niveau supérieur pour visualiser votre évolution !
+                    </p>
+                    <div className="flex gap-4">
+                        <button 
+                            onClick={() => navigate('/dashboard')}
+                            className="px-8 py-4 rounded-2xl font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all"
+                        >
+                            Retour
+                        </button>
+                        <button 
+                            onClick={() => navigate('/upgrade')}
+                            style={{
+                                background: 'linear-gradient(135deg, #0d9488, #10b981)',
+                                color: 'white', padding: '16px 40px', borderRadius: 20,
+                                fontWeight: 800, border: 'none', cursor: 'pointer',
+                                boxShadow: '0 10px 20px rgba(13, 148, 136, 0.2)',
+                                display: 'flex', alignItems: 'center', gap: 10,
+                                transition: 'all 0.3s'
+                            }}
+                        >
+                            <Crown size={20} /> Débloquer maintenant
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-7xl mx-auto">
                     {/* Header */}
@@ -126,67 +275,7 @@ export default function SkinHistoryPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Main List */}
                         <div className="lg:col-span-2 space-y-4">
-                            {error ? (
-                                <div className="bg-white p-12 rounded-3xl border border-rose-100 text-center">
-                                    <Activity className="w-12 h-12 text-rose-300 mx-auto mb-4" />
-                                    <h3 className="text-lg font-bold text-slate-900">{error}</h3>
-                                    <button
-                                        onClick={() => window.location.reload()}
-                                        className="mt-6 inline-flex items-center gap-2 px-6 py-2 bg-[#0d9488] text-white rounded-full font-bold hover:bg-[#0a7a70] transition-all"
-                                    >
-                                        Try Again
-                                    </button>
-                                </div>
-                            ) : filteredAnalyses.length > 0 ? (
-                                filteredAnalyses.map((analysis) => (
-                                    <div key={analysis.id} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all group">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-4">
-                                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold ${analysis.skinScore >= 75 ? 'bg-teal-50 text-teal-600 border border-teal-100' :
-                                                    analysis.skinScore >= 50 ? 'bg-amber-50 text-amber-600 border border-amber-100' :
-                                                        'bg-rose-50 text-rose-600 border border-rose-100'
-                                                    }`}>
-                                                    {analysis.skinScore}
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Analysis Date</p>
-                                                    <p className="font-bold text-slate-900">
-                                                        {new Date(analysis.createdAt).toLocaleDateString('en-US', {
-                                                            day: 'numeric',
-                                                            month: 'long',
-                                                            year: 'numeric'
-                                                        })}
-                                                    </p>
-                                                    <div className="text-xs text-slate-500 flex items-center gap-1">
-                                                        <Activity className="w-3 h-3" />
-                                                        {analysis.summary || 'General health check'}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <Link
-                                                to={`/analysis/details/${analysis.id}`}
-                                                className="flex items-center gap-2 text-sm font-bold text-[#0d9488] hover:gap-3 transition-all"
-                                            >
-                                                View Details
-                                                <ChevronRight className="w-4 h-4" />
-                                            </Link>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="bg-white p-12 rounded-3xl border border-dashed border-slate-300 text-center">
-                                    <History className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">Analysis History</h2>
-                                    <p className="text-slate-500 text-sm font-medium">Track your skincare journey over time</p>
-                                    <Link
-                                        to="/analysis"
-                                        className="inline-flex items-center gap-2 px-6 py-2 bg-[#0d9488] text-white rounded-full font-bold hover:bg-[#0a7a70] transition-all"
-                                    >
-                                        Analyze Skin Now
-                                    </Link>
-                                </div>
-                            )}
+                            {renderHistoryContent()}
 
                             {/* Pagination Controls */}
                             {totalItems > pageSize && (

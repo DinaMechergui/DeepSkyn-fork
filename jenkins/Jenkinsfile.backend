@@ -1,0 +1,104 @@
+pipeline {
+    agent any
+
+    tools {
+        nodejs 'Node18'
+    }
+
+    environment {
+        PROJECT_NAME    = 'deepskyn'
+        SERVICE_NAME    = 'backend'
+        CONTAINER_NAME  = 'deepskyn-backend'
+        DB_CONTAINER    = 'deepskyn-db'
+        NETWORK_NAME    = 'deepskyn_network'
+        IMAGE_NAME      = "${PROJECT_NAME}-${SERVICE_NAME}"
+        IMAGE_TAG       = "${env.BUILD_NUMBER}"
+
+        // IP de la passerelle Docker (Vérifiée via Diagnostic Réseau)
+        SONAR_HOST_URL  = "http://172.17.0.1:9000"
+    }
+
+    stages {
+        stage('🔍 Diagnostic Réseau') {
+            steps {
+                echo "--- Vérification du réseau Jenkins ---"
+                sh "cat /etc/hosts"
+                sh "getent hosts github.com || echo 'DNS : github.com inconnu'"
+                echo "--- Test de connexion SonarQube ---"
+                sh "curl -v http://172.20.10.5:9000/api/system/status --connect-timeout 2 || echo 'FAIL: 172.20.10.5 injoignable'"
+                sh "curl -v http://172.17.0.1:9000/api/system/status --connect-timeout 2 || echo 'FAIL: 172.17.0.1 injoignable'"
+                sh "curl -I https://140.82.121.3 --insecure --connect-timeout 5 || echo 'Réseau : IP injoignable'"
+            }
+        }
+
+        stage('📦 Checkout') {
+            steps {
+                echo "📦 Récupération du code depuis GitHub..."
+                script {
+                    try {
+                        git branch: 'master', url: 'https://github.com/rouabougattaya/DeepSkyn.git'
+                    } catch (Exception e) {
+                        echo "⚠️ Échec DNS, tentative via IP directe..."
+                        sh "git config --global http.sslVerify false"
+                        git branch: 'master', url: 'https://140.82.121.3/rouabougattaya/DeepSkyn.git'
+                    }
+                }
+            }
+        }
+
+        stage('📦 Install Dependencies') {
+            steps {
+                echo "📦 Installation des dépendances..."
+                sh '''
+                    cd backend
+                    npm install --legacy-peer-deps
+                '''
+            }
+        }
+
+        stage('🧪 Tests & Coverage') {
+            steps {
+                echo "🧪 Exécution des tests avec couverture..."
+                sh '''
+                    cd backend
+                    npm run test -- --coverage --config jest.config.js --runInBand --forceExit
+                '''
+            }
+        }
+
+        stage('📊 SonarQube Analysis') {
+            steps {
+                echo "📊 Analyse du code avec SonarQube..."
+                withSonarQubeEnv('sonarqube') {
+                    timeout(time: 10, unit: 'MINUTES') {
+                        sh '''
+                            cd backend
+                            npx sonarqube-scanner \
+                              -X \
+                              -Dsonar.host.url=${SONAR_HOST_URL} \
+                              -Dsonar.projectKey=${PROJECT_NAME}-${SERVICE_NAME} \
+                              -Dsonar.sources=src \
+                              -Dsonar.tests=src \
+                              -Dsonar.test.inclusions="**/*.spec.ts" \
+                              -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
+                              -Dsonar.verbose=true \
+                              -Dsonar.exclusions="**/*.spec.ts,dist/**,node_modules/**"
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('🏗️ Build NestJS') {
+            steps {
+                echo "🏗️ Compilation du backend..."
+                sh 'cd backend && npm run build'
+            }
+        }
+    }
+
+    post {
+        success { echo "✅ CI Pipeline (Tests & Sonar) réussi !" }
+        failure { echo "❌ CI Pipeline échoué." }
+    }
+}

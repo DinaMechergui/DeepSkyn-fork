@@ -156,14 +156,55 @@ export function updateSessionUser(user: Partial<SessionUser>): void {
 
 /** Récupère le CSRF token depuis le backend */
 async function getCsrfToken(): Promise<string> {
-  const response = await fetch(`${API_URL}/auth/csrf-token`, {
-    method: 'GET',
-    credentials: 'include'
-  });
-  const data = await response.json().catch(() => ({}));
-  const token = data?.csrfToken || response.headers.get('X-CSRF-Token');
-  if (!token) throw new Error('CSRF token not found');
-  return token;
+  try {
+    const response = await fetch(`${API_URL}/auth/csrf-token`, {
+      method: 'GET',
+      credentials: 'include'
+    });
+    if (!response.ok) return '';
+    const data = await response.json().catch(() => ({}));
+    const token = data?.csrfToken || response.headers.get('X-CSRF-Token');
+    return token || '';
+  } catch (err) {
+    console.debug('[CSRF] Could not pre-fetch token:', err);
+    return '';
+  }
+}
+
+async function handleTokenRefresh(originalUrl: string, options: RequestInit, headers: HeadersInit): Promise<Response | null> {
+  try {
+    const csrfToken = await getCsrfToken()
+    const refreshRes = await fetch(`${API_URL}/auth/refresh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrfToken,
+      },
+      credentials: 'include',
+      body: JSON.stringify({ refreshToken: getRefreshToken() }),
+    })
+    const data = await refreshRes.json().catch(() => ({}))
+    if (refreshRes.ok && data.accessToken) {
+      setSession({
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        accessTokenExpiresAt: data.accessTokenExpiresAt,
+        refreshTokenExpiresAt: data.refreshTokenExpiresAt,
+        user: data.user,
+      })
+      const newAccess = getAccessToken()
+      if (newAccess) {
+        (headers as Record<string, string>)["Authorization"] = `Bearer ${newAccess}`
+        return fetch(originalUrl, { ...options, headers, credentials: 'include' })
+      }
+    } else {
+      clearSession()
+    }
+  } catch (error) {
+    console.error('Token refresh failed:', error)
+    clearSession()
+  }
+  return null;
 }
 
 export const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
@@ -189,43 +230,19 @@ export const authFetch = async (url: string, options: RequestInit = {}): Promise
   }
 
   // Ensure the URL is absolute by prepending API_URL if it's a relative path
-  const finalUrl = url.startsWith('http') ? url : `${API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+  let finalUrl = url;
+  if (!url.startsWith('http')) {
+    const separator = url.startsWith('/') ? '' : '/';
+    finalUrl = `${API_URL}${separator}${url}`;
+  }
 
   let res = await fetch(finalUrl, { ...options, headers, credentials: 'include' })
 
   // Si c'est une erreur 401 et qu'on a un token temporaire (Google), ne pas essayer de rafraîchir
   if (res.status === 401 && getRefreshToken() && !getAccessToken()?.startsWith('google_')) {
-    try {
-      const csrfToken = await getCsrfToken()
-      const refreshRes = await fetch(`${API_URL}/auth/refresh`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken,
-        },
-        credentials: 'include',
-        body: JSON.stringify({ refreshToken: getRefreshToken() }),
-      })
-      const data = await refreshRes.json().catch(() => ({}))
-      if (refreshRes.ok && data.accessToken) {
-        setSession({
-          accessToken: data.accessToken,
-          refreshToken: data.refreshToken,
-          accessTokenExpiresAt: data.accessTokenExpiresAt,
-          refreshTokenExpiresAt: data.refreshTokenExpiresAt,
-          user: data.user,
-        })
-        const newAccess = getAccessToken()
-        if (newAccess) {
-          (headers as Record<string, string>)["Authorization"] = `Bearer ${newAccess}`
-          res = await fetch(url, { ...options, headers, credentials: 'include' })
-        }
-      } else {
-        clearSession()
-      }
-    } catch (error) {
-      console.error('Token refresh failed:', error)
-      clearSession()
+    const retryRes = await handleTokenRefresh(finalUrl, options, headers);
+    if (retryRes) {
+      res = retryRes;
     }
   }
 

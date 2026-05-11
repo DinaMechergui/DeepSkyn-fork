@@ -35,28 +35,8 @@ class AIService {
 
     // Tenter de fetch l'image pour voir si c'est une vraie photo
     let isRealPhoto = false;
-
     if (isGooglePhoto) {
-      try {
-        const response = await fetch(highResUrl, { method: 'HEAD' });
-
-        if (!response.ok || response.status === 429) {
-          // Rate limited — fallback : on assume que c'est une vraie photo car c'est un compte Google
-          console.log(`⚠️ Google CDN status ${response.status}, assuming real photo for Google account`);
-          isRealPhoto = true;
-        } else {
-          const contentLength = response.headers.get('content-length');
-          const fileSize = parseInt(contentLength || '0');
-
-          // Les avatars par défaut font souvent < 4-6KB. Les vraies photos font généralement > 8KB.
-          isRealPhoto = fileSize > 6000;
-
-          console.log(`📏 Taille image: ${fileSize} bytes → ${isRealPhoto ? 'PROBABLE PHOTO' : 'AVATAR'}`);
-        }
-      } catch (e) {
-        // Fallback si fetch bloqué (CORS) - on fait confiance à Google
-        isRealPhoto = true;
-      }
+      isRealPhoto = await this.handleGooglePhotoAnalysis(highResUrl);
     }
 
     let quality = 0.3;
@@ -67,10 +47,12 @@ class AIService {
       hasFace = true;
     } else if (isGooglePhoto && !isRealPhoto) {
       quality = 0.2;
-      hasFace = false;
     } else if (photoUrl.startsWith('https://')) {
       quality = 0.6;
-      hasFace = Math.random() > 0.5;
+      // Secure random check
+      const array = new Uint8Array(1);
+      window.crypto.getRandomValues(array);
+      hasFace = array[0] > 127;
     }
 
     console.log(`🎭 isRealPhoto: ${isRealPhoto}, quality=${quality}, hasFace=${hasFace}`);
@@ -138,9 +120,13 @@ class AIService {
         trustScore -= 0.15;
       }
 
-      // Vérifier format email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (emailRegex.test(email)) trustScore += 0.1;
+      // Vérifier format email sans Regex pour éviter ReDoS
+      if (email.length < 255 && email.includes('@') && email.includes('.')) {
+        const parts = email.split('@');
+        if (parts.length === 2 && parts[1].includes('.')) {
+          trustScore += 0.1;
+        }
+      }
 
       // Pénaliser les emails suspects
       if (domain.includes('temp') || domain.includes('fake') || domain.includes('10minutemail')) {
@@ -173,51 +159,21 @@ class AIService {
       const nameParts = name.toLowerCase().split(/\s+/).filter(p => p.length > 1);
       const emailHandle = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, ' ');
 
-      // 1. Cohérence Nom vs Email Prefix
-      let nameEmailConsistency = 0.4;
-      if (nameParts.length > 0) {
-        const matches = nameParts.filter(part => emailHandle.includes(part));
-        if (matches.length > 0) {
-          nameEmailConsistency = 0.5 + (matches.length / nameParts.length) * 0.5;
-        }
-      }
-
       // 2. Comparaison avec le nom Google
-      let nameGoogleMatch = 1.0;
-      if (user.googleName) {
-        const profileName = name.toLowerCase().trim();
-        const gName = user.googleName.toLowerCase().trim();
-
-        if (profileName !== gName) {
-          const gParts = gName.split(/\s+/);
-          const hasCommonPart = nameParts.some(p => gParts.includes(p));
-          nameGoogleMatch = hasCommonPart ? 0.5 : 0.1;
-        }
-      }
-
-      const nameConsistency = user.googleName
-        ? (nameGoogleMatch * 0.7 + nameEmailConsistency * 0.3)
-        : nameEmailConsistency;
+      const nameConsistency = this.calculateNameConsistency(user.googleName, nameParts, emailHandle);
 
       // 3. Vérification de la BIO
-      const hasBio = bio.trim().length > 10;
-      const bioStatus = hasBio ? 1.0 : 0.0;
-      const bioPenalty = hasBio ? 0 : 0.15;
+      const { bioStatus, bioPenalty } = this.handleBioAnalysis(bio);
 
       // Critères de photo et complétude
       const hasPhoto = !!user.picture;
       const photoAnalysis = user.photoAnalysis;
       const hasFaceDetection = photoAnalysis?.hasFace || false;
       const isRealPerson = hasFaceDetection && photoQuality > 0.6;
-      const isCompleteProfile = nameParts.length >= 2 && hasPhoto && !!user.email && hasBio;
+      const isCompleteProfile = nameParts.length >= 2 && hasPhoto && !!user.email && bio.trim().length > 10;
 
       // Pondérations PLUS STRICTES
-      const weights = {
-        email: 0.25,
-        photo: 0.25,
-        nameConsistency: 0.35,
-        completeness: 0.15
-      };
+      const weights = { email: 0.25, photo: 0.25, nameConsistency: 0.35, completeness: 0.15 };
 
       let score = 0;
       score += emailTrust * weights.email;
@@ -335,6 +291,45 @@ class AIService {
     console.log(`📊 Score calculation: Photo(${photoAnalysis.quality.toFixed(2)} × ${photoWeight}) + Email(${emailAnalysis.score.toFixed(2)} × ${emailWeight}) = ${overallScore.toFixed(2)}`);
 
     return Math.min(overallScore, 1.0);
+  }
+
+  // Helpers to reduce complexity
+  private async handleGooglePhotoAnalysis(highResUrl: string): Promise<boolean> {
+    try {
+      const response = await fetch(highResUrl, { method: 'HEAD' });
+      if (!response.ok || response.status === 429) return true;
+      const fileSize = parseInt(response.headers.get('content-length') || '0');
+      return fileSize > 6000;
+    } catch (e) {
+      return true;
+    }
+  }
+
+  private handleBioAnalysis(bio: string): { bioStatus: number, bioPenalty: number } {
+    const hasBio = bio.trim().length > 10;
+    return {
+      bioStatus: hasBio ? 1.0 : 0.0,
+      bioPenalty: hasBio ? 0 : 0.15
+    };
+  }
+
+  private calculateNameConsistency(googleName: string | undefined, nameParts: string[], emailHandle: string): number {
+    let nameEmailConsistency = 0.4;
+    if (nameParts.length > 0) {
+      const matches = nameParts.filter(part => emailHandle.includes(part));
+      if (matches.length > 0) {
+        nameEmailConsistency = 0.5 + (matches.length / nameParts.length) * 0.5;
+      }
+    }
+
+    if (!googleName) return nameEmailConsistency;
+
+    let nameGoogleMatch = 1.0;
+    const gParts = googleName.toLowerCase().trim().split(/\s+/);
+    const hasCommonPart = nameParts.some(p => gParts.includes(p));
+    nameGoogleMatch = hasCommonPart ? 0.5 : 0.1;
+
+    return (nameGoogleMatch * 0.7 + nameEmailConsistency * 0.3);
   }
 }
 

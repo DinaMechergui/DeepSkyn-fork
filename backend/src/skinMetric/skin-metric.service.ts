@@ -12,6 +12,8 @@ import type {
   MetricKey,
 } from '../compare-analysis.dto';
 
+type GlobalTrend = 'improvement' | 'regression' | 'stable';
+
 @Injectable()
 export class SkinMetricService {
   private readonly logger = new Logger(SkinMetricService.name);
@@ -80,6 +82,42 @@ export class SkinMetricService {
     };
   }
 
+  /**
+   * Retourne les dernières analyses d'un utilisateur avec les champs skinAge/realAge pour les insights skin age.
+   */
+  private parseNumOrNull(val: any): number | null {
+    return typeof val === 'number' ? val : null;
+  }
+
+  async getUserSkinAgeSeries(
+    userId: string,
+    limit: number = 5
+  ): Promise<{ id: string; createdAt: Date; skinAge: number | null; realAge: number | null; skinScore: number | null; acne?: number | null; oil?: number | null; hydration?: number | null; wrinkles?: number | null }[]> {
+    if (!userId || typeof userId !== 'string') {
+      this.logger.warn('getUserSkinAgeSeries called with missing or invalid userId');
+      throw new UnauthorizedException('User ID is required');
+    }
+
+    const list = await this.analysisRepo.find({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+      select: ['id', 'createdAt', 'skinAge', 'realAge', 'skinScore', 'acne', 'oil', 'hydration', 'wrinkles', 'aiRawResponse'],
+      take: limit,
+    });
+
+    return list.map(item => ({
+      id: item.id,
+      createdAt: item.createdAt,
+      skinAge: this.parseNumOrNull(item.skinAge),
+      realAge: item.aiRawResponse?.realAgeSource === 'analysis-input' ? this.parseNumOrNull(item.realAge) : null,
+      skinScore: this.parseNumOrNull(item.skinScore),
+      acne: this.parseNumOrNull((item as any).acne),
+      oil: this.parseNumOrNull((item as any).oil),
+      hydration: this.parseNumOrNull((item as any).hydration),
+      wrinkles: this.parseNumOrNull((item as any).wrinkles),
+    }));
+  }
+
   async getAnalysisById(id: string) {
     const analysis = await this.analysisRepo.findOne({ where: { id } });
     if (!analysis) throw new NotFoundException('Analysis not found');
@@ -95,23 +133,32 @@ export class SkinMetricService {
    * Build unified metrics view (hydration, oil, acne, wrinkles) from entity and/or SkinMetric rows.
    */
   private buildMetricsView(analysis: SkinAnalysis, metrics: SkinMetric[]): AnalysisMetricsView {
-    const fromEntity = (key: MetricKey): number => {
+    const fromEntity = (key: MetricKey): number | undefined => {
       const v = (analysis as any)[key];
-      return typeof v === 'number' && !Number.isNaN(v) ? v : NaN;
+      return typeof v === 'number' && !Number.isNaN(v) ? v : undefined;
     };
-    const fromMetrics = (metricTypeMatch: string): number => {
+    const fromMetrics = (metricTypeMatch: string): number | undefined => {
       const m = metrics.find(
         x => x.metricType?.toLowerCase() === metricTypeMatch.toLowerCase()
       );
-      return m != null ? m.score : NaN;
+      return m != null ? m.score : undefined;
     };
-    const num = (v: number) => (Number.isFinite(v) ? v : 0);
+    const num = (v: number | undefined) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
     return {
       hydration: num(fromEntity('hydration') ?? fromMetrics('hydration')),
       oil: num(fromEntity('oil') ?? fromMetrics('oil') ?? fromMetrics('enlarged-pores')),
       acne: num(fromEntity('acne') ?? fromMetrics('acne')),
       wrinkles: num(fromEntity('wrinkles') ?? fromMetrics('wrinkles')),
     };
+  }
+
+  private async getAnalysisData(id: string) {
+    const analysis = await this.analysisRepo.findOne({ where: { id } });
+    if (!analysis) throw new NotFoundException(`Analysis not found: ${id}`);
+    const metrics = await this.metricRepo.find({ where: { analysisId: id } });
+    const view = this.buildMetricsView(analysis, metrics);
+    const realAge = analysis.aiRawResponse?.realAgeSource === 'analysis-input' ? analysis.realAge ?? null : null;
+    return { analysis, metrics, view, realAge };
   }
 
   /**
@@ -121,20 +168,13 @@ export class SkinMetricService {
   async compare(firstId: string, secondId: string): Promise<CompareAnalysisResultDto> {
     this.logger.log(`Compare requested: firstId=${firstId}, secondId=${secondId}`);
 
-    const [first, second] = await Promise.all([
-      this.analysisRepo.findOne({ where: { id: firstId } }),
-      this.analysisRepo.findOne({ where: { id: secondId } }),
-    ]);
-    if (!first) throw new NotFoundException(`Analysis not found: ${firstId}`);
-    if (!second) throw new NotFoundException(`Analysis not found: ${secondId}`);
-
-    const [metricsFirst, metricsSecond] = await Promise.all([
-      this.metricRepo.find({ where: { analysisId: firstId } }),
-      this.metricRepo.find({ where: { analysisId: secondId } }),
+    const [data1, data2] = await Promise.all([
+      this.getAnalysisData(firstId),
+      this.getAnalysisData(secondId),
     ]);
 
-    const m1 = this.buildMetricsView(first, metricsFirst);
-    const m2 = this.buildMetricsView(second, metricsSecond);
+    const { analysis: first, metrics: metricsFirst, view: m1, realAge: firstRealAge } = data1;
+    const { analysis: second, metrics: metricsSecond, view: m2, realAge: secondRealAge } = data2;
 
     this.logger.debug(`Analysis ${firstId} metrics: ${JSON.stringify(m1)} (SkinMetric count: ${metricsFirst.length})`);
     this.logger.debug(`Analysis ${secondId} metrics: ${JSON.stringify(m2)} (SkinMetric count: ${metricsSecond.length})`);
@@ -148,25 +188,12 @@ export class SkinMetricService {
 
     const keys: MetricKey[] = ['hydration', 'oil', 'acne', 'wrinkles'];
     const THRESHOLD = 2;
-    const differences: MetricDifference[] = keys.map(metric => {
-      const firstVal = m1[metric];
-      const secondVal = m2[metric];
-      const delta = Math.round((secondVal - firstVal) * 10) / 10;
-      let trend: 'improvement' | 'regression' | 'stable' = 'stable';
-      if (metric === 'hydration' || metric === 'oil') {
-        if (delta > THRESHOLD) trend = 'improvement';
-        else if (delta < -THRESHOLD) trend = 'regression';
-      } else {
-        if (delta < -THRESHOLD) trend = 'improvement';
-        else if (delta > THRESHOLD) trend = 'regression';
-      }
-      return { metric, firstValue: firstVal, secondValue: secondVal, delta, trend };
-    });
+    const differences: MetricDifference[] = keys.map(metric =>
+      this.computeMetricDifference(metric, m1, m2, THRESHOLD)
+    );
 
     const scoreDelta = (second.skinScore ?? 0) - (first.skinScore ?? 0);
-    let globalTrend: 'improvement' | 'regression' | 'stable' = 'stable';
-    if (scoreDelta > THRESHOLD) globalTrend = 'improvement';
-    else if (scoreDelta < -THRESHOLD) globalTrend = 'regression';
+    const globalTrend = this.computeGlobalTrend(scoreDelta, THRESHOLD);
 
     const summaryText = this.buildComparisonSummary(
       { first, second, m1, m2, differences, globalTrend }
@@ -177,7 +204,7 @@ export class SkinMetricService {
         id: first.id,
         skinScore: first.skinScore ?? 0,
         skinAge: first.skinAge ?? null,
-        realAge: first.realAge ?? null,
+        realAge: firstRealAge,
         createdAt: first.createdAt.toISOString(),
         metrics: m1,
         summary: first.summary ?? null,
@@ -186,7 +213,7 @@ export class SkinMetricService {
         id: second.id,
         skinScore: second.skinScore ?? 0,
         skinAge: second.skinAge ?? null,
-        realAge: second.realAge ?? null,
+        realAge: secondRealAge,
         createdAt: second.createdAt.toISOString(),
         metrics: m2,
         summary: second.summary ?? null,
@@ -198,15 +225,45 @@ export class SkinMetricService {
     };
   }
 
+  private computeMetricDifference(
+    metric: MetricKey,
+    m1: AnalysisMetricsView,
+    m2: AnalysisMetricsView,
+    threshold: number,
+  ): MetricDifference {
+    const firstVal = m1[metric];
+    const secondVal = m2[metric];
+    const delta = Math.round((secondVal - firstVal) * 10) / 10;
+    let trend: GlobalTrend = 'stable';
+    if (metric === 'hydration' || metric === 'oil') {
+      if (delta > threshold) trend = 'improvement';
+      else if (delta < -threshold) trend = 'regression';
+    } else {
+      if (delta < -threshold) trend = 'improvement';
+      else if (delta > threshold) trend = 'regression';
+    }
+    return { metric, firstValue: firstVal, secondValue: secondVal, delta, trend };
+  }
+
+  private computeGlobalTrend(scoreDelta: number, threshold: number): GlobalTrend {
+    if (scoreDelta > threshold) return 'improvement';
+    if (scoreDelta < -threshold) return 'regression';
+    return 'stable';
+  }
+
+  private formatMetricChange(d: MetricDifference, labels: Record<MetricKey, string>): string {
+    return `${labels[d.metric]} (${d.firstValue} → ${d.secondValue})`;
+  }
+
   private buildComparisonSummary(params: {
     first: SkinAnalysis;
     second: SkinAnalysis;
     m1: AnalysisMetricsView;
     m2: AnalysisMetricsView;
     differences: MetricDifference[];
-    globalTrend: 'improvement' | 'regression' | 'stable';
+    globalTrend: GlobalTrend;
   }): string {
-    const { first, second, m1, m2, differences, globalTrend } = params;
+    const { first, second, differences, globalTrend } = params;
     const score1 = first.skinScore ?? 0;
     const score2 = second.skinScore ?? 0;
     const date1 = new Date(first.createdAt).toLocaleDateString('fr-FR');
@@ -214,7 +271,7 @@ export class SkinMetricService {
     const parts: string[] = [];
 
     if (globalTrend === 'improvement') {
-      parts.push(`Entre le ${date1} et le ${date2}, votre peau s’est globalement améliorée : le score est passé de ${score1} à ${score2}/100.`);
+      parts.push(`Entre le ${date1} et le ${date2}, votre peau s'est globalement améliorée : le score est passé de ${score1} à ${score2}/100.`);
     } else if (globalTrend === 'regression') {
       parts.push(`Entre le ${date1} et le ${date2}, une légère baisse du score global est observée (${score1} → ${score2}/100).`);
     } else {
@@ -231,10 +288,10 @@ export class SkinMetricService {
     };
 
     if (improvements.length) {
-      parts.push(` Améliorations notables : ${improvements.map(d => `${labels[d.metric]} (${d.firstValue} → ${d.secondValue})`).join(', ')}.`);
+      parts.push(` Améliorations notables : ${improvements.map(d => this.formatMetricChange(d, labels)).join(', ')}.`);
     }
     if (regressions.length) {
-      parts.push(` Points de vigilance : ${regressions.map(d => `${labels[d.metric]} (${d.firstValue} → ${d.secondValue})`).join(', ')}.`);
+      parts.push(` Points de vigilance : ${regressions.map(d => this.formatMetricChange(d, labels)).join(', ')}.`);
     }
     if (improvements.length === 0 && regressions.length === 0 && globalTrend === 'stable') {
       parts.push(' Les métriques détaillées (hydratation, sébum, acné, rides) sont restées stables.');

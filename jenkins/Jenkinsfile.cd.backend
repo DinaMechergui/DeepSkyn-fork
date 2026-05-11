@@ -1,0 +1,150 @@
+pipeline {
+    agent {
+        label 'k8s-master'
+    }
+
+    tools {
+        nodejs 'Node18'
+    }
+
+    environment {
+        PROJECT_NAME    = 'deepskyn'
+        SERVICE_NAME    = 'backend'
+        CONTAINER_NAME  = 'deepskyn-backend'
+        DB_CONTAINER    = 'deepskyn-db'
+        NETWORK_NAME    = 'deepskyn_network'
+        DOCKER_USER     = 'skanderbensalah1'
+        IMAGE_NAME      = "${DOCKER_USER}/${PROJECT_NAME}-${SERVICE_NAME}"
+        IMAGE_TAG       = "${env.BUILD_NUMBER}"
+        PORT            = '3001'
+    }
+
+    stages {
+        stage('🔍 Diagnostic Réseau') {
+            steps {
+                echo "--- Vérification du réseau Jenkins ---"
+                sh "cat /etc/hosts"
+                sh "getent hosts github.com || echo 'DNS : github.com inconnu'"
+                sh "curl -I https://140.82.121.3 --insecure --connect-timeout 5 || echo 'Réseau : IP injoignable'"
+            }
+        }
+
+        stage('📦 Checkout') {
+            steps {
+                echo "📦 Récupération du code depuis GitHub..."
+                script {
+                    try {
+                        git branch: 'master', url: 'https://github.com/rouabougattaya/DeepSkyn.git'
+                    } catch (Exception e) {
+                        echo "⚠️ Échec DNS, tentative via IP directe..."
+                        sh "git config --global http.sslVerify false"
+                        git branch: 'master', url: 'https://140.82.121.3/rouabougattaya/DeepSkyn.git'
+                    }
+                }
+            }
+        }
+
+        stage('📦 Install Dependencies') {
+            steps {
+                echo "📦 Installation des dépendances..."
+                sh '''
+                    cd backend
+                    npm install --legacy-peer-deps
+                '''
+            }
+        }
+
+        stage('🏗️ Build NestJS') {
+            steps {
+                echo "🏗️ Compilation du backend..."
+                sh 'cd backend && npm run build'
+            }
+        }
+
+        stage('🐳 Docker Build & Push') {
+            steps {
+                echo "🐳 Construction et Push de l'image Docker..."
+                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -t ${IMAGE_NAME}:latest ./backend"
+                
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                    sh "echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin"
+                    
+                    // Retry jusqu'à 3 fois en cas de timeout réseau (TLS handshake, etc.)
+                    retry(3) {
+                        timeout(time: 20, unit: 'MINUTES') {
+                            sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+                        }
+                    }
+                    retry(3) {
+                        timeout(time: 20, unit: 'MINUTES') {
+                            sh "docker push ${IMAGE_NAME}:latest"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('🚀 Deploy DEV') {
+            steps {
+                echo "🚀 Déploiement BACKEND sur DEV..."
+                sh 'kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -'
+                sh '''
+                    cp -r k8s k8s-dev
+                    sed -i "s|deepskyn-backend:latest|${IMAGE_NAME}:latest|g" k8s-dev/backend.yaml
+                    sed -i 's/namespace: deepskyn/namespace: dev/g' k8s-dev/*.yaml
+                    
+                    kubectl apply -f k8s-dev/postgres.yaml
+                    kubectl apply -f k8s-dev/backend.yaml
+                    
+                    kubectl rollout status deployment/backend -n dev
+                '''
+            }
+        }
+
+        stage('🚀 Deploy STAGING') {
+            steps {
+                echo "🚀 Déploiement BACKEND sur STAGING..."
+                sh 'kubectl create namespace staging --dry-run=client -o yaml | kubectl apply -f -'
+                sh '''
+                    cp -r k8s k8s-staging
+                    sed -i "s|deepskyn-backend:latest|${IMAGE_NAME}:latest|g" k8s-staging/backend.yaml
+                    sed -i 's/namespace: deepskyn/namespace: staging/g' k8s-staging/*.yaml
+                    
+                    kubectl apply -f k8s-staging/postgres.yaml
+                    kubectl apply -f k8s-staging/backend.yaml
+                    
+                    kubectl rollout status deployment/backend -n staging
+                '''
+            }
+        }
+
+        stage('🔥 Deploy PROD') {
+            input {
+                message "⚠️ Déployer le BACKEND en PRODUCTION ?"
+                ok "Oui, déployer !"
+            }
+            steps {
+                echo "🔥 Déploiement BACKEND sur PROD..."
+                sh 'kubectl create namespace prod --dry-run=client -o yaml | kubectl apply -f -'
+                sh '''
+                    cp -r k8s k8s-prod
+                    sed -i "s|deepskyn-backend:latest|${IMAGE_NAME}:latest|g" k8s-prod/backend.yaml
+                    sed -i 's/namespace: deepskyn/namespace: prod/g' k8s-prod/*.yaml
+                    
+                    kubectl apply -f k8s-prod/postgres.yaml
+                    kubectl apply -f k8s-prod/backend.yaml
+                    
+                    kubectl rollout status deployment/backend -n prod
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'rm -rf k8s-dev k8s-staging k8s-prod || true'
+        }
+        success { echo "✅ Déploiement Backend réussi pour tous les environnements !" }
+        failure { echo "❌ Déploiement Backend échoué." }
+    }
+}

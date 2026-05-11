@@ -8,6 +8,7 @@ export interface User {
   name: string;
   picture?: string;
   googleName?: string;
+  bio?: string;
   authMethod: 'email' | 'google' | 'apple';
   createdAt: string;
   lastLoginAt: string;
@@ -147,7 +148,7 @@ class SimpleAuthService {
         email: user.email,
         picture: user.picture,
         googleName: user.googleName,
-        bio: (user as any).bio,
+        bio: user.bio,
       });
 
       // Mettre à jour l'utilisateur avec les infos AI

@@ -11,6 +11,7 @@ export class FingerprintService {
     os: string;
     ip: string;
     isMobile: boolean;
+    isTablet: boolean;
   }> {
     const userAgent = req.headers['user-agent'] || '';
     const acceptLanguage = req.headers['accept-language'] || '';
@@ -19,7 +20,6 @@ export class FingerprintService {
     const ip = 
       (req.headers['x-forwarded-for'] as string)?.split(',').shift()?.trim() ||
       req.socket?.remoteAddress ||
-      req.connection?.remoteAddress ||
       (req as any).ip ||
       'IP non disponible';
 
@@ -27,8 +27,9 @@ export class FingerprintService {
     const browser = this.detectBrowser(userAgent);
     const os = this.detectOS(userAgent);
     const isMobile = /mobile|android|iphone|ipad|ipod/i.test(userAgent);
+    const isTablet = /ipad|tablet|(android(?!.*mobile))/i.test(userAgent);
     
-    const rawFingerprint = `${userAgent}|${acceptLanguage}|${ip}|${browser}|${os}`;
+    const rawFingerprint = `${userAgent}|${acceptLanguage}|${ip}|${browser}|${os}|${isTablet}`;
     
     const hash = crypto
       .createHash('sha256')
@@ -41,6 +42,7 @@ export class FingerprintService {
       os,
       ip,
       isMobile,
+      isTablet,
     };
   }
 

@@ -8,6 +8,7 @@ import {
   ArrayMinSize,
   ArrayMaxSize,
   IsNumber,
+  IsDateString,
 } from 'class-validator';
 
 export class RegisterDto {
@@ -27,6 +28,10 @@ export class RegisterDto {
   @MinLength(1)
   @MaxLength(100)
   lastName: string;
+
+  @IsOptional()
+  @IsDateString()
+  birthDate?: string;
 
   // ✅ AJOUT : empreinte visage (128 valeurs)
   @IsOptional()
